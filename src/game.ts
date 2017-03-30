@@ -117,7 +117,7 @@ module game {
   }
 
   function handleBallBallCollision(bodyA: Matter.Body, bodyB: Matter.Body) {
-    if (_firstTouchBall) {
+    if (!_firstTouchBall) {
       let ballNumberA = Number(bodyA.label.split(' ')[1]);
       let ballNumberB = Number(bodyB.label.split(' ')[1]);
       if (ballNumberA != 0 && ballNumberB == 0) {
@@ -343,7 +343,7 @@ module game {
       context.fillText(statusText, context.canvas.width, fontSize);
     }
     // show mouse coords on screen bottom
-    if (_mouse != null) {
+    if (_mouse) {
       let coordText = "(" + _mouse.position.x.toFixed(0) + "," + _mouse.position.y.toFixed(0) + ")";
       context.textAlign = "center";
       context.fillText(coordText, context.canvas.width / 2, context.canvas.height - fontSize);
