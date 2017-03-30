@@ -32,7 +32,6 @@ module GameplayConsts {
     export const ClickForceMax = 0.04;
 };
 
-
 module game {
   export let $rootScope: angular.IScope = null;
   export let $timeout: angular.ITimeoutService = null;
@@ -73,13 +72,24 @@ module game {
   var _bottomRightCorner: Matter.Vector;
   var _mouseDistance = 0; // mouse distance from cue ball
   var _gameStage: GameStage;
-  var _firstTouchBall: Ball | null;
+  var _firstTouchBall: Ball | null = null;
   var _pocketedBalls: Ball[] = [];
   // view models
   var cueBallModel: BallModel;
   var eightBallModel: BallModel;
   var solidBallModels: BallModel[] = [];
   var stripedBallModels: BallModel[] = [];
+
+  function resetGlobals() {
+    _mouseDistance = 0;
+    _firstTouchBall = null;
+    _pocketedBalls = [];
+    solidBallModels = [];
+    stripedBallModels = [];
+    if (_engine) Engine.clear(_engine);
+    if (_world) World.clear(_world, false);
+    if (_render) Render.stop(_render);
+  }
 
   function shootClick(cueBall: Matter.Body) {
     let forcePosition: Matter.Vector = {
@@ -107,7 +117,7 @@ module game {
   }
 
   function handleBallBallCollision(bodyA: Matter.Body, bodyB: Matter.Body) {
-    if (_firstTouchBall == null) {
+    if (_firstTouchBall) {
       let ballNumberA = Number(bodyA.label.split(' ')[1]);
       let ballNumberB = Number(bodyB.label.split(' ')[1]);
       if (ballNumberA != 0 && ballNumberB == 0) {
@@ -221,6 +231,7 @@ module game {
     _gameState.CueBall.Position = { X: clampedPos.x, Y: clampedPos.y };
     cueBallModel = createCueBallModel(_gameState.CueBall);
     World.add(_world, cueBallModel.Body);
+    _gameState.CueBall.Pocketed = false;
   }
 
   function finalize() {
@@ -250,8 +261,8 @@ module game {
       CanMoveCueBall: _gameState.CanMoveCueBall, // set by gamelogic
       PoolBoard: _gameState.PoolBoard,
       FirstMove: _gameState.FirstMove, // set by gamelogic
-      Player1Color: null, // set by gamelogic
-      Player2Color: null, // set by gamelogic
+      Player1Color: _gameState.Player1Color, // set by gamelogic
+      Player2Color: _gameState.Player2Color, // set by gamelogic
       DeltaBalls: theReturnState,
     }
     console.log(finalState);
@@ -316,7 +327,7 @@ module game {
     if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming)) {
       // Use player turn index to get the current player
       let designatedGroup = '';
-      if (yourPlayerIndex() == 1) designatedGroup = AssignedBallType[_gameState.Player1Color];
+      if (yourPlayerIndex() == 0) designatedGroup = AssignedBallType[_gameState.Player1Color];
       else designatedGroup = AssignedBallType[_gameState.Player2Color];
       let myColorText = "Designated group: " + designatedGroup;
       context.textAlign = "right";
@@ -338,10 +349,6 @@ module game {
       context.fillText(coordText, context.canvas.width / 2, context.canvas.height - fontSize);
     }
     context.restore();
-  }
-
-  export function getGameStage(): GameStage {
-    return _gameStage;
   }
 
   // ========================================
@@ -379,6 +386,7 @@ module game {
 
   export function updateUI(params: IUpdateUI): void {
     log.info("Game got updateUI:", params);
+    resetGlobals();
     // get the game state from server
     currentUpdateUI = params;
     _gameState = params.state;

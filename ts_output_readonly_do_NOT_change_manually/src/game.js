@@ -52,13 +52,26 @@ var game;
     var _bottomRightCorner;
     var _mouseDistance = 0; // mouse distance from cue ball
     var _gameStage;
-    var _firstTouchBall;
+    var _firstTouchBall = null;
     var _pocketedBalls = [];
     // view models
     var cueBallModel;
     var eightBallModel;
     var solidBallModels = [];
     var stripedBallModels = [];
+    function resetGlobals() {
+        _mouseDistance = 0;
+        _firstTouchBall = null;
+        _pocketedBalls = [];
+        solidBallModels = [];
+        stripedBallModels = [];
+        if (_engine)
+            Engine.clear(_engine);
+        if (_world)
+            World.clear(_world, false);
+        if (_render)
+            Render.stop(_render);
+    }
     function shootClick(cueBall) {
         var forcePosition = {
             x: cueBall.position.x + 1.0 * Math.cos(cueBall.angle),
@@ -81,7 +94,7 @@ var game;
         return isWorldSleeping;
     }
     function handleBallBallCollision(bodyA, bodyB) {
-        if (_firstTouchBall == null) {
+        if (_firstTouchBall) {
             var ballNumberA = Number(bodyA.label.split(' ')[1]);
             var ballNumberB = Number(bodyB.label.split(' ')[1]);
             if (ballNumberA != 0 && ballNumberB == 0) {
@@ -193,6 +206,7 @@ var game;
         _gameState.CueBall.Position = { X: clampedPos.x, Y: clampedPos.y };
         cueBallModel = createCueBallModel(_gameState.CueBall);
         World.add(_world, cueBallModel.Body);
+        _gameState.CueBall.Pocketed = false;
     }
     function finalize() {
         // send the move over network here
@@ -223,8 +237,8 @@ var game;
             CanMoveCueBall: _gameState.CanMoveCueBall,
             PoolBoard: _gameState.PoolBoard,
             FirstMove: _gameState.FirstMove,
-            Player1Color: null,
-            Player2Color: null,
+            Player1Color: _gameState.Player1Color,
+            Player2Color: _gameState.Player2Color,
             DeltaBalls: theReturnState,
         };
         console.log(finalState);
@@ -286,7 +300,7 @@ var game;
         if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming)) {
             // Use player turn index to get the current player
             var designatedGroup = '';
-            if (yourPlayerIndex() == 1)
+            if (yourPlayerIndex() == 0)
                 designatedGroup = AssignedBallType[_gameState.Player1Color];
             else
                 designatedGroup = AssignedBallType[_gameState.Player2Color];
@@ -311,10 +325,6 @@ var game;
         }
         context.restore();
     }
-    function getGameStage() {
-        return _gameStage;
-    }
-    game.getGameStage = getGameStage;
     // ========================================
     // multiplayer gaming platform stuff
     // ========================================
@@ -348,6 +358,7 @@ var game;
     }
     function updateUI(params) {
         log.info("Game got updateUI:", params);
+        resetGlobals();
         // get the game state from server
         game.currentUpdateUI = params;
         _gameState = params.state;
