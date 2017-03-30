@@ -1,27 +1,28 @@
-// the game stage
-var GameStage;
-(function (GameStage) {
-    GameStage[GameStage["PlacingCue"] = 1] = "PlacingCue";
-    GameStage[GameStage["Aiming"] = 2] = "Aiming";
-    GameStage[GameStage["CueHit"] = 3] = "CueHit";
-    GameStage[GameStage["Finalized"] = 4] = "Finalized";
-})(GameStage || (GameStage = {}));
+// // the game stage
+// enum GameStage {
+//     PlacingCue = 1, // player is placing the cue ball
+//     Aiming, // player is ready to hit the cue ball
+//     CueHit, // player has hit the cue ball
+//     Finalized, // game state is sent over network
+// }
+// interface BallModel {
+//     Ball: Ball,
+//     Body: Matter.Body,
+// }
 // bunch of game play constants
-var GameplayConsts;
-(function (GameplayConsts) {
-    GameplayConsts.CollisionCategoryCue = 0x0001;
-    GameplayConsts.CollisionCategoryNormalBalls = 0x0002;
-    GameplayConsts.CollisionMaskAllBalls = 0x0003;
-    GameplayConsts.CollisionMaskMouse = 0x0000;
-    GameplayConsts.BallRestitution = 0.9;
-    GameplayConsts.BallFriction = 0.01;
-    GameplayConsts.BorderThickness = 16;
-    // export const BorderClearance = 10;
-    GameplayConsts.BallTextureSize = 128; // ball textures are 128x128
-    GameplayConsts.ClickDistanceLimit = 150;
-    GameplayConsts.ClickForceMax = 0.04;
-})(GameplayConsts || (GameplayConsts = {}));
-;
+// module GameplayConsts {
+//     export const CollisionCategoryCue = 0x0001;
+//     export const CollisionCategoryNormalBalls = 0x0002;
+//     export const CollisionMaskAllBalls = 0x0003;
+//     export const CollisionMaskMouse = 0x0000;
+//     export const BallRestitution = 0.9;
+//     export const BallFriction = 0.01;
+//     export const BorderThickness = 16;
+//     // export const BorderClearance = 10;
+//     export const BallTextureSize = 128; // ball textures are 128x128
+//     export const ClickDistanceLimit = 150;
+//     export const ClickForceMax = 0.04;
+// };
 var GameExample;
 (function (GameExample) {
     // using shortcuts
@@ -214,7 +215,7 @@ var GameExample;
         };
         console.log(theReturnState);
         console.log(finalState);
-        // console.log(GameLogic.createMove(finalState, 0));
+        console.log(GameLogic.createMove(null, finalState, 0, null));
     }
     function drawGuideLine(context) {
         var cueBody = cueBallModel.Body;

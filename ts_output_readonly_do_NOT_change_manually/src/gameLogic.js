@@ -221,7 +221,7 @@ var GameLogic;
         }
         return -1;
     }
-    function createMove(stateBeforeMove, stateAfterMove, turnIndexBeforeMove, gameSettings) {
+    function createMove(currentState, currentTurnIndex) {
         var nextMove; // this will be returned as the next move
         stateAfterMove.CanMoveCueBall = false; // discontinuing the use of CanMoveCueBall property if it was in use
         /** FIRST SHOT AFTER MOVE

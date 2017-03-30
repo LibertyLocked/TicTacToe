@@ -1,30 +1,30 @@
-// the game stage
-enum GameStage {
-    PlacingCue = 1, // player is placing the cue ball
-    Aiming, // player is ready to hit the cue ball
-    CueHit, // player has hit the cue ball
-    Finalized, // game state is sent over network
-}
+// // the game stage
+// enum GameStage {
+//     PlacingCue = 1, // player is placing the cue ball
+//     Aiming, // player is ready to hit the cue ball
+//     CueHit, // player has hit the cue ball
+//     Finalized, // game state is sent over network
+// }
 
-interface BallModel {
-    Ball: Ball,
-    Body: Matter.Body,
-}
+// interface BallModel {
+//     Ball: Ball,
+//     Body: Matter.Body,
+// }
 
 // bunch of game play constants
-module GameplayConsts {
-    export const CollisionCategoryCue = 0x0001;
-    export const CollisionCategoryNormalBalls = 0x0002;
-    export const CollisionMaskAllBalls = 0x0003;
-    export const CollisionMaskMouse = 0x0000;
-    export const BallRestitution = 0.9;
-    export const BallFriction = 0.01;
-    export const BorderThickness = 16;
-    // export const BorderClearance = 10;
-    export const BallTextureSize = 128; // ball textures are 128x128
-    export const ClickDistanceLimit = 150;
-    export const ClickForceMax = 0.04;
-};
+// module GameplayConsts {
+//     export const CollisionCategoryCue = 0x0001;
+//     export const CollisionCategoryNormalBalls = 0x0002;
+//     export const CollisionMaskAllBalls = 0x0003;
+//     export const CollisionMaskMouse = 0x0000;
+//     export const BallRestitution = 0.9;
+//     export const BallFriction = 0.01;
+//     export const BorderThickness = 16;
+//     // export const BorderClearance = 10;
+//     export const BallTextureSize = 128; // ball textures are 128x128
+//     export const ClickDistanceLimit = 150;
+//     export const ClickForceMax = 0.04;
+// };
 
 module GameExample {
     // using shortcuts
@@ -231,7 +231,7 @@ module GameExample {
         }
         console.log(theReturnState);
         console.log(finalState);
-        // console.log(GameLogic.createMove(finalState, 0));
+        console.log(GameLogic.createMove(null, finalState, 0, null));
     }
 
     function drawGuideLine(context: CanvasRenderingContext2D) {

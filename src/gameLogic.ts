@@ -68,12 +68,6 @@ interface IState {
     DeltaBalls: ReturnState;
 }
 
-interface IMove {
-  endMatchScores: number[];
-  turnIndexAfterMove: number;
-  stateAfterMove: IState;
-}
-
 module GameLogic{
     
   export function getInitialState(): IState {
@@ -310,8 +304,7 @@ function isBallContained(ballNum:number, balls:Ball[]):number{
     return -1;
 }
 
-export function createMove(stateBeforeMove: IState, 
-    stateAfterMove: IState, turnIndexBeforeMove: number, gameSettings: any): IMove {
+export function createMove(currentState: IState, currentTurnIndex: number): IMove {
     
     let nextMove: IMove;    // this will be returned as the next move
     stateAfterMove.CanMoveCueBall=false;    // discontinuing the use of CanMoveCueBall property if it was in use

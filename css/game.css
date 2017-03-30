@@ -27,22 +27,34 @@ textarea, input {
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
   display: none !important;
 }
-body {
-  background-color: rgb(250,250,250);
-}
-
-.r {
-  border-right: 4pt solid black;
-}
-.b {
-  border-bottom: 4pt solid black;
-}
-
-.slowlyAppear {
-  animation: slowlyAppear 0.5s linear;
-}
 
 @keyframes slowlyAppear {
   from {opacity: 0.1;}
   to {opacity: 1;}
+}
+
+body { 
+    background: #222;
+}
+
+canvas {
+    margin: 0;
+    max-width: 100%;
+    border-radius: 3px;
+}
+
+canvas:active { 
+    cursor: pointer;
+    cursor: -webkit-grabbing;
+}
+
+#canvas-container {
+    margin: 0px 0;
+}
+
+#game-overlay {
+    z-index: 2;
+    position: absolute;
+    top: 0px;
+    left: 0px;
 }
