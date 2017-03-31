@@ -303,8 +303,8 @@ module game {
 
   function drawGameHUD(context: CanvasRenderingContext2D) {
     context.save();
-    let fontSize = 20;
-    context.font = "20px Arial";
+    let fontSize = 16;
+    context.font = "16px Arial";
     context.fillStyle = "white";
     let textLeft = "";
     switch (_gameStage) {

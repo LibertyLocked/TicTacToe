@@ -93,12 +93,16 @@ interface IState {
 module GameLogic {
 
     export function getInitialState(): IState {
-        let blackX = 264;
-        let blackY = 264;
+        //To change the size the board, simply change the coefficient, then all the size will change accordingly.
+        let coefficient = 0.8;
+        let blackX = 264 * coefficient;
+        let blackY = 264 * coefficient;
+        let BoardHeight = 960 * coefficient;
+        let BoardWidth = 530 * coefficient;
         const BallRadius = 12;
 
         let CueBall: Ball = {
-            Position: { X: blackX, Y: blackY + 400 },
+            Position: { X: blackX * coefficient, Y: blackY + 400 * coefficient },
             Pocketed: false,
             Radius: BallRadius,
             BallType: BallType.Cue,
@@ -247,46 +251,44 @@ module GameLogic {
         let Pockets: Pocket[] = [];
 
         let Pocket1: Pocket = {
-            Position: { X: 48, Y: 50 },
+            Position: { X: BoardWidth * 0.08, Y: BoardHeight * 0.05 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket1);
-
+        //Change 0.08 to 0.07 to put it closer to edge.
         let Pocket2: Pocket = {
-            Position: { X: 40, Y: 481 },
-            //Position: {X:48,Y:481},
+            Position: { X: BoardWidth * 0.07, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket2);
 
         let Pocket3: Pocket = {
-            Position: { X: 48, Y: 912 },
+            Position: { X: BoardWidth * 0.08, Y: BoardHeight * 0.95 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket3);
 
         let Pocket4: Pocket = {
-            Position: { X: 482, Y: 50 },
+            Position: { X: BoardWidth * 0.92, Y: BoardHeight * 0.05 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket4);
-
+        //Change 0.92 to 0.93 to put it closer to edge.
         let Pocket5: Pocket = {
-            Position: { X: 490, Y: 481 },
-            //Position: {X:482,Y:481},
+            Position: { X: BoardWidth * 0.93, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket5);
 
         let Pocket6: Pocket = {
-            Position: { X: 482, Y: 912 },
+            Position: { X: BoardWidth * 0.92, Y: BoardHeight * 0.95 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket6);
 
         let PoolBoard: Board = {
-            Height: 960,
-            Width: 531,
+            Height: BoardHeight,
+            Width: BoardWidth,
             StartLine: CueBall.Position.Y,
             Pockets: Pockets,
         }

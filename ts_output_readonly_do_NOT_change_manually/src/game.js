@@ -276,8 +276,8 @@ var game;
     }
     function drawGameHUD(context) {
         context.save();
-        var fontSize = 20;
-        context.font = "20px Arial";
+        var fontSize = 16;
+        context.font = "16px Arial";
         context.fillStyle = "white";
         var textLeft = "";
         switch (_gameStage) {
