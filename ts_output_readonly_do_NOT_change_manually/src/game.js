@@ -247,23 +247,33 @@ var game;
         // send the move over network
         gameService.makeMove(newMove, null);
     }
-    function drawGuideLine(context) {
+    function drawGuideLine(context, length, width, style, alpha) {
         var cueBody = cueBallModel.Body;
         var startPoint = { x: cueBody.position.x, y: cueBody.position.y };
         var endPoint = {
-            x: cueBody.position.x + _mouseDistance * Math.cos(cueBody.angle),
-            y: cueBody.position.y + _mouseDistance * Math.sin(cueBody.angle)
+            x: cueBody.position.x + length * Math.cos(cueBody.angle),
+            y: cueBody.position.y + length * Math.sin(cueBody.angle)
         };
         context.save();
-        context.globalAlpha = 0.5;
+        context.globalAlpha = alpha;
         context.beginPath();
-        context.setLineDash([3]);
+        context.setLineDash([4]);
         context.moveTo(startPoint.x, startPoint.y);
         context.lineTo(endPoint.x, endPoint.y);
-        context.strokeStyle = 'red';
-        context.lineWidth = 5.5;
+        context.strokeStyle = style;
+        context.lineWidth = width;
         context.stroke();
-        context.closePath();
+        context.restore();
+    }
+    function drawGuideCircle(context) {
+        context.save();
+        context.strokeStyle = "white";
+        context.lineWidth = 2;
+        context.globalAlpha = 0.3;
+        context.setLineDash([Math.PI * 5, Math.PI * 10]);
+        context.beginPath();
+        context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y, GameplayConsts.ClickDistanceLimit, 0, 2 * Math.PI);
+        context.stroke();
         context.restore();
     }
     function drawCueStick(context) {
@@ -279,6 +289,7 @@ var game;
         var fontSize = 16;
         context.font = "16px Arial";
         context.fillStyle = "white";
+        // text on the left
         var textLeft = "";
         switch (_gameStage) {
             case GameStage.PlacingCue:
@@ -292,31 +303,35 @@ var game;
                     textLeft = "First touch: " + _firstTouchBall.Number;
                 break;
             case GameStage.Finalized:
-                textLeft = "Opponent's turn!";
+                if (!isGameOver())
+                    textLeft = "Opponent's turn!";
+                else
+                    textLeft = game.currentUpdateUI.endMatchScores[yourPlayerIndex()] == 0 ? "You lose!" : "You win!";
                 break;
         }
+        context.fillStyle = "yellow";
         context.textAlign = "left";
         context.fillText(textLeft, 0, fontSize);
-        if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming)) {
-            // Use player turn index to get the current player
+        // text on the right
+        var textRight = "";
+        if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming || _gameStage == GameStage.Finalized)) {
             var designatedGroup = '';
             if (yourPlayerIndex() == 0)
                 designatedGroup = AssignedBallType[_gameState.Player1Color];
             else
                 designatedGroup = AssignedBallType[_gameState.Player2Color];
-            var myColorText = "Designated group: " + designatedGroup;
-            context.textAlign = "right";
-            context.fillText(myColorText, context.canvas.width, fontSize);
+            textRight = "Designated group: " + designatedGroup;
         }
-        if ((_gameStage == GameStage.Finalized || _gameStage == GameStage.CueHit) && _pocketedBalls.length != 0) {
-            var statusText = "Pocketed: ";
+        if (_gameStage == GameStage.CueHit && _pocketedBalls.length != 0) {
+            textRight = "Pocketed: ";
             for (var _i = 0, _pocketedBalls_1 = _pocketedBalls; _i < _pocketedBalls_1.length; _i++) {
                 var ball = _pocketedBalls_1[_i];
-                statusText += ball.Number + ",";
+                textRight += ball.Number + ",";
             }
-            context.textAlign = "right";
-            context.fillText(statusText, context.canvas.width, fontSize);
         }
+        context.fillStyle = "white";
+        context.textAlign = "right";
+        context.fillText(textRight, context.canvas.width, fontSize);
         // show mouse coords on screen bottom
         if (_mouse) {
             var coordText = "(" + _mouse.position.x.toFixed(0) + "," + _mouse.position.y.toFixed(0) + ")";
@@ -518,12 +533,14 @@ var game;
             if (_gameStage == GameStage.Aiming) {
                 Matter.Body.setAngle(cueBallModel.Body, angle);
             }
-            // draw the render line
+            // draw the guidelines, cue stick, guide circle
             if (_gameStage == GameStage.Aiming) {
                 if (_mouseDistance < GameplayConsts.ClickDistanceLimit) {
-                    drawGuideLine(_render.context);
+                    drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
+                    drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
                     drawCueStick(_render.context);
                 }
+                drawGuideCircle(_render.context);
             }
             // send return state when all bodies are sleeping
             if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
@@ -570,6 +587,9 @@ var game;
     function isMyTurn() {
         return game.currentUpdateUI.turnIndex >= 0 &&
             game.currentUpdateUI.yourPlayerIndex === game.currentUpdateUI.turnIndex; // it's my turn
+    }
+    function isGameOver() {
+        return game.currentUpdateUI.turnIndex == -1;
     }
 })(game || (game = {}));
 angular.module('myApp', ['gameServices'])

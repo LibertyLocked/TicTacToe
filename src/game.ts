@@ -272,23 +272,35 @@ module game {
     gameService.makeMove(newMove, null);
   }
 
-  function drawGuideLine(context: CanvasRenderingContext2D) {
+  function drawGuideLine(context: CanvasRenderingContext2D, length: number, width: number, style: string, alpha: number) {
     let cueBody = cueBallModel.Body;
     let startPoint = { x: cueBody.position.x, y: cueBody.position.y };
     let endPoint = {
-      x: cueBody.position.x + _mouseDistance * Math.cos(cueBody.angle),
-      y: cueBody.position.y + _mouseDistance * Math.sin(cueBody.angle)
+      x: cueBody.position.x + length * Math.cos(cueBody.angle),
+      y: cueBody.position.y + length * Math.sin(cueBody.angle)
     }
     context.save();
-    context.globalAlpha = 0.5;
+    context.globalAlpha = alpha;
     context.beginPath();
-    context.setLineDash([3]);
+    context.setLineDash([4]);
     context.moveTo(startPoint.x, startPoint.y);
     context.lineTo(endPoint.x, endPoint.y);
-    context.strokeStyle = 'red';
-    context.lineWidth = 5.5;
+    context.strokeStyle = style;
+    context.lineWidth = width;
     context.stroke();
-    context.closePath();
+    context.restore();
+  }
+
+  function drawGuideCircle(context: CanvasRenderingContext2D) {
+    context.save();
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+    context.globalAlpha = 0.3;
+    context.setLineDash([Math.PI*5, Math.PI*10]);
+    context.beginPath();
+    context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y,
+      GameplayConsts.ClickDistanceLimit, 0, 2*Math.PI);
+    context.stroke();
     context.restore();
   }
 
@@ -306,6 +318,7 @@ module game {
     let fontSize = 16;
     context.font = "16px Arial";
     context.fillStyle = "white";
+    // text on the left
     let textLeft = "";
     switch (_gameStage) {
       case GameStage.PlacingCue:
@@ -318,30 +331,32 @@ module game {
         if (_firstTouchBall) textLeft = "First touch: " + _firstTouchBall.Number;
         break;
       case GameStage.Finalized:
-        textLeft = "Opponent's turn!";
+        if (!isGameOver()) textLeft = "Opponent's turn!";
+        else textLeft = currentUpdateUI.endMatchScores[yourPlayerIndex()] == 0 ? "You lose!" : "You win!";
         break;
     }
+    context.fillStyle = "yellow";
     context.textAlign = "left";
     context.fillText(textLeft, 0, fontSize);
 
-    if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming)) {
-      // Use player turn index to get the current player
+    // text on the right
+    let textRight = "";
+    if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming || _gameStage == GameStage.Finalized)) {
       let designatedGroup = '';
       if (yourPlayerIndex() == 0) designatedGroup = AssignedBallType[_gameState.Player1Color];
       else designatedGroup = AssignedBallType[_gameState.Player2Color];
-      let myColorText = "Designated group: " + designatedGroup;
-      context.textAlign = "right";
-      context.fillText(myColorText, context.canvas.width, fontSize);
+      textRight = "Designated group: " + designatedGroup;
     }
-
-    if ((_gameStage == GameStage.Finalized || _gameStage == GameStage.CueHit) && _pocketedBalls.length != 0) {
-      let statusText = "Pocketed: ";
+    if (_gameStage == GameStage.CueHit && _pocketedBalls.length != 0) {
+      textRight  = "Pocketed: ";
       for (let ball of _pocketedBalls) {
-        statusText += ball.Number + ",";
+        textRight += ball.Number + ",";
       }
-      context.textAlign = "right";
-      context.fillText(statusText, context.canvas.width, fontSize);
     }
+    context.fillStyle = "white";
+    context.textAlign = "right";
+    context.fillText(textRight, context.canvas.width, fontSize);
+    
     // show mouse coords on screen bottom
     if (_mouse) {
       let coordText = "(" + _mouse.position.x.toFixed(0) + "," + _mouse.position.y.toFixed(0) + ")";
@@ -549,12 +564,14 @@ module game {
         Matter.Body.setAngle(cueBallModel.Body, angle);
       }
 
-      // draw the render line
+      // draw the guidelines, cue stick, guide circle
       if (_gameStage == GameStage.Aiming) {
         if (_mouseDistance < GameplayConsts.ClickDistanceLimit) {
-          drawGuideLine(_render.context);
+          drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
+          drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
           drawCueStick(_render.context);
         }
+        drawGuideCircle(_render.context);
       }
       // send return state when all bodies are sleeping
       if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
@@ -582,7 +599,7 @@ module game {
     gameService.makeMove(move, null);
   }
 
-  function isFirstMove() {
+  function isFirstMove(): boolean {
     return !currentUpdateUI.state;
   }
 
@@ -590,23 +607,27 @@ module game {
     return currentUpdateUI.yourPlayerIndex;
   }
 
-  function isComputer() {
+  function isComputer(): boolean {
     let playerInfo = currentUpdateUI.playersInfo[currentUpdateUI.yourPlayerIndex];
     // In community games, playersInfo is [].
     return playerInfo && playerInfo.playerId === '';
   }
 
-  function isComputerTurn() {
+  function isComputerTurn(): boolean {
     return isMyTurn() && isComputer();
   }
 
-  function isHumanTurn() {
+  function isHumanTurn(): boolean {
     return isMyTurn() && !isComputer();
   }
 
-  function isMyTurn() {
+  function isMyTurn(): boolean {
     return currentUpdateUI.turnIndex >= 0 && // game is ongoing
       currentUpdateUI.yourPlayerIndex === currentUpdateUI.turnIndex; // it's my turn
+  }
+
+  function isGameOver(): boolean {
+    return currentUpdateUI.turnIndex == -1;
   }
 }
 
