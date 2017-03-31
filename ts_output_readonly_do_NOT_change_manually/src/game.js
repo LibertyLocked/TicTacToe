@@ -535,7 +535,7 @@ var game;
             }
             // draw the guidelines, cue stick, guide circle
             if (_gameStage == GameStage.Aiming) {
-                if (_mouseDistance < GameplayConsts.ClickDistanceLimit) {
+                if (_mouseDistance < GameplayConsts.ClickDistanceLimit && _mouseDistance > 0) {
                     drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
                     drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
                     drawCueStick(_render.context);
