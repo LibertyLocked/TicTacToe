@@ -15,8 +15,8 @@ var GameplayConsts;
     GameplayConsts.CollisionMaskMouse = 0x0000;
     GameplayConsts.BallRestitution = 0.9;
     GameplayConsts.BallFriction = 0.01;
-    GameplayConsts.BorderThickness = 16;
-    // export const BorderClearance = 10;
+    GameplayConsts.BorderThicknessIn = 8;
+    GameplayConsts.BorderThicknessOut = 50;
     GameplayConsts.BallTextureSize = 128; // ball textures are 128x128
     GameplayConsts.ClickDistanceLimit = 150;
     GameplayConsts.ClickForceMax = 0.04;
@@ -48,8 +48,10 @@ var game;
     var _world;
     var _render;
     var _mouse;
-    var _topLeftCorner; // used for bounds
-    var _bottomRightCorner;
+    var _boardMinX; // used for bounds
+    var _boardMaxX;
+    var _boardMinY;
+    var _boardMaxY;
     var _mouseDistance = 0; // mouse distance from cue ball
     var _gameStage;
     var _firstTouchBall = null;
@@ -78,7 +80,6 @@ var game;
             y: cueBall.position.y + 1.0 * Math.sin(cueBall.angle)
         };
         var force = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
-        console.log("force pos: ", forcePosition);
         console.log("force mag: ", force);
         console.log("render len: ", _mouseDistance);
         Matter.Body.applyForce(cueBall, forcePosition, {
@@ -90,8 +91,7 @@ var game;
     function isWorldSleeping(world) {
         var bodies = Matter.Composite.allBodies(world);
         var sleeping = bodies.filter(function (body) { return body.isSleeping; });
-        var isWorldSleeping = bodies.length === sleeping.length;
-        return isWorldSleeping;
+        return bodies.length === sleeping.length;
     }
     function handleBallBallCollision(bodyA, bodyB) {
         if (!_firstTouchBall) {
@@ -137,19 +137,29 @@ var game;
         return newCueModel;
     }
     // constructs a rectangle body as border, from pocket1 to pocket2
-    function createBorderBody(pocket1, pocket2, vertical) {
+    function createBorderBody(pocket1, pocket2, leftOrRight, leftOrTop) {
         var x, y, width, height;
-        if (vertical) {
+        var thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
+        var thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
+        if (leftOrRight) {
             x = pocket1.Position.X;
             y = (pocket1.Position.Y + pocket2.Position.Y) / 2.0;
-            width = GameplayConsts.BorderThickness;
-            height = pocket2.Position.Y - pocket1.Position.Y - (pocket1.Radius - pocket2.Radius) / 2;
+            if (leftOrTop)
+                x -= thicknessOffset;
+            else
+                x += thicknessOffset;
+            width = thicknessTotal;
+            height = pocket2.Position.Y - pocket1.Position.Y;
         }
         else {
             x = (pocket1.Position.X + pocket2.Position.X) / 2.0;
             y = pocket1.Position.Y;
-            width = pocket2.Position.X - pocket1.Position.X - (pocket1.Radius - pocket2.Radius) / 2;
-            height = GameplayConsts.BorderThickness;
+            if (leftOrTop)
+                y -= thicknessOffset;
+            else
+                y += thicknessOffset;
+            width = _render.canvas.width; // horizontal borders are full width
+            height = thicknessTotal;
         }
         return Bodies.rectangle(x, y, width, height, {
             isStatic: true,
@@ -186,9 +196,9 @@ var game;
         }
     }
     // clamps the position within board bounds
-    function clampWithinBounds(pos) {
-        var x = Math.min(_bottomRightCorner.x - GameplayConsts.BorderThickness, Math.max(pos.x, _topLeftCorner.x + GameplayConsts.BorderThickness));
-        var y = Math.min(_bottomRightCorner.y - GameplayConsts.BorderThickness, Math.max(pos.y, _topLeftCorner.y + GameplayConsts.BorderThickness));
+    function clampWithinBounds(pos, radius) {
+        var x = Math.min(_boardMaxX - GameplayConsts.BorderThicknessIn - radius, Math.max(pos.x, _boardMinX + GameplayConsts.BorderThicknessIn + radius));
+        var y = Math.min(_boardMaxY - GameplayConsts.BorderThicknessIn - radius, Math.max(pos.y, _boardMinY + GameplayConsts.BorderThicknessIn + radius));
         return { x: x, y: y };
     }
     // moves the cue ball and recreates the cue ball body and model
@@ -202,7 +212,7 @@ var game;
             y = pos.y;
         }
         // clamp within bounds
-        var clampedPos = clampWithinBounds({ x: pos.x, y: y });
+        var clampedPos = clampWithinBounds({ x: pos.x, y: y }, cueBallModel.Ball.Radius);
         _gameState.CueBall.Position = { X: clampedPos.x, Y: clampedPos.y };
         cueBallModel = createCueBallModel(_gameState.CueBall);
         World.add(_world, cueBallModel.Body);
@@ -417,15 +427,17 @@ var game;
         // create borders
         var pockets = _gameState.PoolBoard.Pockets;
         World.add(_world, [
-            createBorderBody(pockets[0], pockets[3], false),
-            createBorderBody(pockets[2], pockets[5], false),
-            createBorderBody(pockets[1], pockets[0], true),
-            createBorderBody(pockets[1], pockets[2], true),
-            createBorderBody(pockets[4], pockets[3], true),
-            createBorderBody(pockets[4], pockets[5], true),
+            createBorderBody(pockets[0], pockets[3], false, true),
+            createBorderBody(pockets[2], pockets[5], false, false),
+            createBorderBody(pockets[1], pockets[0], true, true),
+            createBorderBody(pockets[1], pockets[2], true, true),
+            createBorderBody(pockets[4], pockets[3], true, false),
+            createBorderBody(pockets[4], pockets[5], true, false),
         ]);
-        _topLeftCorner = { x: pockets[0].Position.X, y: pockets[0].Position.Y };
-        _bottomRightCorner = { x: pockets[5].Position.X, y: pockets[5].Position.Y };
+        _boardMinY = pockets[0].Position.Y;
+        _boardMaxY = pockets[2].Position.Y;
+        _boardMinX = pockets[1].Position.X;
+        _boardMaxX = pockets[4].Position.X;
         // create pockets
         for (var _i = 0, _a = _gameState.PoolBoard.Pockets; _i < _a.length; _i++) {
             var pocket = _a[_i];
@@ -492,8 +504,8 @@ var game;
             var mouseUpPosition = event.mouse.mouseupPosition;
             if (_gameStage == GameStage.Aiming /* && isHumanTurn() */) {
                 // only shoot cue ball when the mouse is around the cue ball
-                var dist = distanceBetweenVectors(mouseUpPosition, cueBallModel.Body.position);
-                if (dist < GameplayConsts.ClickDistanceLimit) {
+                if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
+                    _mouseDistance >= cueBallModel.Ball.Radius) {
                     _gameStage = GameStage.CueHit;
                     shootClick(cueBallModel.Body);
                 }
@@ -527,7 +539,6 @@ var game;
             var horizontalDistance = cuePosition.x - _mouse.position.x;
             var verticalDistance = cuePosition.y - _mouse.position.y;
             var angle = Math.atan2(verticalDistance, horizontalDistance);
-            _mouse.position = _mouse.position;
             _mouseDistance = distanceBetweenVectors(cuePosition, _mouse.position);
             // set cue ball angle if aiming
             if (_gameStage == GameStage.Aiming) {
@@ -535,20 +546,24 @@ var game;
             }
             // draw the guidelines, cue stick, guide circle
             if (_gameStage == GameStage.Aiming) {
-                if (_mouseDistance < GameplayConsts.ClickDistanceLimit && _mouseDistance > 0) {
+                if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
+                    _mouseDistance >= cueBallModel.Ball.Radius) {
                     drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
                     drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
                     drawCueStick(_render.context);
                 }
                 drawGuideCircle(_render.context);
             }
+            // always render game HUD
+            drawGameHUD(_render.context);
+        });
+        // EVENT: after every engine update check if all bodies are sleeping
+        Matter.Events.on(_engine, "afterUpdate", function (event) {
             // send return state when all bodies are sleeping
             if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
                 _gameStage = GameStage.Finalized;
                 finalize();
             }
-            // always render game HUD
-            drawGameHUD(_render.context);
         });
         // start simulation
         Render.run(_render);

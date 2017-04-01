@@ -25,8 +25,8 @@ module GameplayConsts {
     export const CollisionMaskMouse = 0x0000;
     export const BallRestitution = 0.9;
     export const BallFriction = 0.01;
-    export const BorderThickness = 16;
-    // export const BorderClearance = 10;
+    export const BorderThicknessIn = 8;
+    export const BorderThicknessOut = 50;
     export const BallTextureSize = 128; // ball textures are 128x128
     export const ClickDistanceLimit = 150;
     export const ClickForceMax = 0.04;
@@ -68,8 +68,10 @@ module game {
   var _render: Matter.Render;
   var _mouse: Matter.Mouse;
 
-  var _topLeftCorner: Matter.Vector; // used for bounds
-  var _bottomRightCorner: Matter.Vector;
+  var _boardMinX: number; // used for bounds
+  var _boardMaxX: number;
+  var _boardMinY: number;
+  var _boardMaxY: number
   var _mouseDistance = 0; // mouse distance from cue ball
   var _gameStage: GameStage;
   var _firstTouchBall: Ball | null = null;
@@ -98,7 +100,6 @@ module game {
     };
     let force: number = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
 
-    console.log("force pos: ", forcePosition);
     console.log("force mag: ", force);
     console.log("render len: ", _mouseDistance);
 
@@ -112,8 +113,7 @@ module game {
   function isWorldSleeping(world: Matter.World): boolean {
     let bodies = Matter.Composite.allBodies(world);
     let sleeping = bodies.filter((body) => body.isSleeping);
-    let isWorldSleeping = bodies.length === sleeping.length;
-    return isWorldSleeping;
+    return bodies.length === sleeping.length;
   }
 
   function handleBallBallCollision(bodyA: Matter.Body, bodyB: Matter.Body) {
@@ -163,18 +163,24 @@ module game {
   }
 
   // constructs a rectangle body as border, from pocket1 to pocket2
-  function createBorderBody(pocket1: Pocket, pocket2: Pocket, vertical: boolean): Matter.Body {
+  function createBorderBody(pocket1: Pocket, pocket2: Pocket, leftOrRight: boolean, leftOrTop: boolean): Matter.Body {
     let x, y, width, height: number;
-    if (vertical) {
+    let thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
+    let thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
+    if (leftOrRight) {
       x = pocket1.Position.X;
       y = (pocket1.Position.Y + pocket2.Position.Y) / 2.0;
-      width = GameplayConsts.BorderThickness;
-      height = pocket2.Position.Y - pocket1.Position.Y - (pocket1.Radius - pocket2.Radius) / 2;
+      if (leftOrTop) x -= thicknessOffset;
+      else x += thicknessOffset;
+      width = thicknessTotal;
+      height = pocket2.Position.Y - pocket1.Position.Y;
     } else {
       x = (pocket1.Position.X + pocket2.Position.X) / 2.0;
       y = pocket1.Position.Y;
-      width = pocket2.Position.X - pocket1.Position.X - (pocket1.Radius - pocket2.Radius) / 2;
-      height = GameplayConsts.BorderThickness;
+      if (leftOrTop) y -= thicknessOffset;
+      else y += thicknessOffset;
+      width = _render.canvas.width; // horizontal borders are full width
+      height = thicknessTotal;
     }
     return Bodies.rectangle(
       x, y, width, height,
@@ -211,9 +217,11 @@ module game {
   }
 
   // clamps the position within board bounds
-  function clampWithinBounds(pos: Matter.Vector): Matter.Vector {
-    let x = Math.min(_bottomRightCorner.x - GameplayConsts.BorderThickness, Math.max(pos.x, _topLeftCorner.x + GameplayConsts.BorderThickness));
-    let y = Math.min(_bottomRightCorner.y - GameplayConsts.BorderThickness, Math.max(pos.y, _topLeftCorner.y + GameplayConsts.BorderThickness));
+  function clampWithinBounds(pos: Matter.Vector, radius: number): Matter.Vector {
+    let x = Math.min(_boardMaxX - GameplayConsts.BorderThicknessIn - radius, 
+      Math.max(pos.x, _boardMinX + GameplayConsts.BorderThicknessIn + radius));
+    let y = Math.min(_boardMaxY - GameplayConsts.BorderThicknessIn - radius, 
+      Math.max(pos.y, _boardMinY + GameplayConsts.BorderThicknessIn + radius));
     return { x: x, y: y };
   }
 
@@ -227,7 +235,7 @@ module game {
       y = pos.y;
     }
     // clamp within bounds
-    let clampedPos = clampWithinBounds({ x: pos.x, y: y });
+    let clampedPos = clampWithinBounds({ x: pos.x, y: y }, cueBallModel.Ball.Radius);
     _gameState.CueBall.Position = { X: clampedPos.x, Y: clampedPos.y };
     cueBallModel = createCueBallModel(_gameState.CueBall);
     World.add(_world, cueBallModel.Body);
@@ -447,15 +455,17 @@ module game {
     // create borders
     let pockets = _gameState.PoolBoard.Pockets;
     World.add(_world, [
-      createBorderBody(pockets[0], pockets[3], false), // top
-      createBorderBody(pockets[2], pockets[5], false), // bottom
-      createBorderBody(pockets[1], pockets[0], true), // left top
-      createBorderBody(pockets[1], pockets[2], true), // left bottom
-      createBorderBody(pockets[4], pockets[3], true), // right top
-      createBorderBody(pockets[4], pockets[5], true), // right bottom
+      createBorderBody(pockets[0], pockets[3], false, true), // top
+      createBorderBody(pockets[2], pockets[5], false, false), // bottom
+      createBorderBody(pockets[1], pockets[0], true, true), // left top
+      createBorderBody(pockets[1], pockets[2], true, true), // left bottom
+      createBorderBody(pockets[4], pockets[3], true, false), // right top
+      createBorderBody(pockets[4], pockets[5], true, false), // right bottom
     ]);
-    _topLeftCorner = { x: pockets[0].Position.X, y: pockets[0].Position.Y };
-    _bottomRightCorner = { x: pockets[5].Position.X, y: pockets[5].Position.Y };
+    _boardMinY = pockets[0].Position.Y;
+    _boardMaxY = pockets[2].Position.Y;
+    _boardMinX = pockets[1].Position.X;
+    _boardMaxX = pockets[4].Position.X;
 
     // create pockets
     for (let pocket of _gameState.PoolBoard.Pockets) {
@@ -524,8 +534,8 @@ module game {
       let mouseUpPosition = <Matter.Vector>event.mouse.mouseupPosition;
       if (_gameStage == GameStage.Aiming /* && isHumanTurn() */) {
         // only shoot cue ball when the mouse is around the cue ball
-        let dist = distanceBetweenVectors(mouseUpPosition, cueBallModel.Body.position);
-        if (dist < GameplayConsts.ClickDistanceLimit) {
+        if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
+          _mouseDistance >= cueBallModel.Ball.Radius) {
           _gameStage = GameStage.CueHit;
           shootClick(cueBallModel.Body);
         }
@@ -556,7 +566,6 @@ module game {
       let horizontalDistance = cuePosition.x - _mouse.position.x;
       let verticalDistance = cuePosition.y - _mouse.position.y;
       let angle = Math.atan2(verticalDistance, horizontalDistance);
-      _mouse.position = _mouse.position;
       _mouseDistance = distanceBetweenVectors(cuePosition, _mouse.position);
 
       // set cue ball angle if aiming
@@ -566,20 +575,24 @@ module game {
 
       // draw the guidelines, cue stick, guide circle
       if (_gameStage == GameStage.Aiming) {
-        if (_mouseDistance < GameplayConsts.ClickDistanceLimit && _mouseDistance > 0) {
+        if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
+          _mouseDistance >= cueBallModel.Ball.Radius) {
           drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
           drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
           drawCueStick(_render.context);
         }
         drawGuideCircle(_render.context);
       }
+      // always render game HUD
+      drawGameHUD(_render.context);
+    });
+    // EVENT: after every engine update check if all bodies are sleeping
+    Matter.Events.on(_engine, "afterUpdate", function(event){
       // send return state when all bodies are sleeping
       if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
         _gameStage = GameStage.Finalized;
         finalize();
       }
-      // always render game HUD
-      drawGameHUD(_render.context);
     });
 
     // start simulation

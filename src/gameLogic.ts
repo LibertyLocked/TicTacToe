@@ -257,7 +257,7 @@ module GameLogic {
         Pockets.push(Pocket1);
         //Change 0.08 to 0.07 to put it closer to edge.
         let Pocket2: Pocket = {
-            Position: { X: BoardWidth * 0.07, Y: BoardHeight * 0.5 },
+            Position: { X: BoardWidth * 0.06, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket2);
@@ -275,7 +275,7 @@ module GameLogic {
         Pockets.push(Pocket4);
         //Change 0.92 to 0.93 to put it closer to edge.
         let Pocket5: Pocket = {
-            Position: { X: BoardWidth * 0.93, Y: BoardHeight * 0.5 },
+            Position: { X: BoardWidth * 0.94, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         }
         Pockets.push(Pocket5);
@@ -470,16 +470,24 @@ module GameLogic {
             var blackIndex = isBallContained(8, pocketedBalls);
             if (blackIndex != -1) {   // black ball is potted --
                 if (!cueBallPotted && myColor == AssignedBallType.Eight) {    // current player wins
-                    if (currentTurnIndex == 0)
+                    if (currentTurnIndex == 0) {
                         nextMove.endMatchScores = [0, 1];
-                    else
+                        nextMove.turnIndex = -1;
+                    }
+                    else {
                         nextMove.endMatchScores = [1, 0];
+                        nextMove.turnIndex = -1;
+                    }
                 }
                 else {   // current player loses
-                    if (currentTurnIndex == 0)
+                    if (currentTurnIndex == 0) {
                         nextMove.endMatchScores = [1, 0];
-                    else
+                        nextMove.turnIndex = -1;
+                    }
+                    else {
                         nextMove.endMatchScores = [0, 1];
+                        nextMove.turnIndex = -1;
+                    }
                 }
                 // // a)
                 // if(isBallContained(0,pocketedBalls)!=-1){

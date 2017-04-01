@@ -180,7 +180,7 @@ var GameLogic;
         Pockets.push(Pocket1);
         //Change 0.08 to 0.07 to put it closer to edge.
         var Pocket2 = {
-            Position: { X: BoardWidth * 0.07, Y: BoardHeight * 0.5 },
+            Position: { X: BoardWidth * 0.06, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         };
         Pockets.push(Pocket2);
@@ -196,7 +196,7 @@ var GameLogic;
         Pockets.push(Pocket4);
         //Change 0.92 to 0.93 to put it closer to edge.
         var Pocket5 = {
-            Position: { X: BoardWidth * 0.93, Y: BoardHeight * 0.5 },
+            Position: { X: BoardWidth * 0.94, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
         };
         Pockets.push(Pocket5);
@@ -362,16 +362,24 @@ var GameLogic;
             var blackIndex = isBallContained(8, pocketedBalls);
             if (blackIndex != -1) {
                 if (!cueBallPotted && myColor == AssignedBallType.Eight) {
-                    if (currentTurnIndex == 0)
+                    if (currentTurnIndex == 0) {
                         nextMove.endMatchScores = [0, 1];
-                    else
+                        nextMove.turnIndex = -1;
+                    }
+                    else {
                         nextMove.endMatchScores = [1, 0];
+                        nextMove.turnIndex = -1;
+                    }
                 }
                 else {
-                    if (currentTurnIndex == 0)
+                    if (currentTurnIndex == 0) {
                         nextMove.endMatchScores = [1, 0];
-                    else
+                        nextMove.turnIndex = -1;
+                    }
+                    else {
                         nextMove.endMatchScores = [0, 1];
+                        nextMove.turnIndex = -1;
+                    }
                 }
             }
             else {
