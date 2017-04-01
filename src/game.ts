@@ -417,7 +417,7 @@ module game {
 
   function drawHightlightBalls(context: CanvasRenderingContext2D) {
     let playerColor = currentUpdateUI.yourPlayerIndex === 0 ? _gameState.Player1Color : _gameState.Player2Color;
-    let ballModelsToHighlight: BallModel[];
+    let ballModelsToHighlight: BallModel[] = [];
     if (playerColor == AssignedBallType.Solids) {
       ballModelsToHighlight = solidBallModels;
     } else if (playerColor == AssignedBallType.Stripes) {

@@ -361,7 +361,7 @@ var game;
     }
     function drawHightlightBalls(context) {
         var playerColor = game.currentUpdateUI.yourPlayerIndex === 0 ? _gameState.Player1Color : _gameState.Player2Color;
-        var ballModelsToHighlight;
+        var ballModelsToHighlight = [];
         if (playerColor == AssignedBallType.Solids) {
             ballModelsToHighlight = solidBallModels;
         }
