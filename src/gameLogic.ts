@@ -316,12 +316,11 @@ module GameLogic {
         }
     }
 
-    /**
-     * This function takes the "currentState" and uses it to create a new State that is passed back to 
-     * the physics engine as an "IMove" object
-     */
+    function theOpponentsTurnIndex(currentTurnIndex: number): number {
+        return 1 - currentTurnIndex;
+    }
 
-    function isBallContained(ballNum: number, balls: Ball[]): number {
+    function getBallIndex(ballNum: number, balls: Ball[]): number {
         let i = 0;
         for (let ball of balls) {
             if (ball.Number == ballNum) {
@@ -332,265 +331,233 @@ module GameLogic {
         return -1;
     }
 
-    export function createMove(currentState: IState, currentTurnIndex: number): IMove {
+    function isBallContained(ballNumber: number, balls: Ball[]): boolean {
+        let contained: boolean = false;
+        if (getBallIndex(ballNumber, balls) != -1) {
+            contained = true;
+        }
+        return contained;
+    }
 
+    function toAssignedBallType(color: BallType): AssignedBallType {
+        let abt: AssignedBallType = null;
+        switch (color) {
+            case BallType.Eight:
+                abt = AssignedBallType.Eight;
+                break;
+            case BallType.Solids:
+                abt = AssignedBallType.Solids;
+                break;
+            case BallType.Stripes:
+                abt = AssignedBallType.Stripes;
+                break;
+            default: ;
+        }
+        return abt;
+    }
+
+    function switchAssignedBallType(color: AssignedBallType): AssignedBallType {
+        let abt: AssignedBallType = AssignedBallType.Any;
+        switch (color) {
+            case AssignedBallType.Solids:
+                abt = AssignedBallType.Stripes;
+                break;
+            case AssignedBallType.Stripes:
+                abt = AssignedBallType.Solids;
+                break;
+            default: ;
+        }
+        return abt;
+    }
+
+    function breakShot(nextMove: IMove, pocketedBalls: Ball[], firstTouchedBall: Ball, currentTurnIndex: number): void {
+        if (isBallContained(8, pocketedBalls)) {
+            nextMove.turnIndex = currentTurnIndex;
+            nextMove.state = getInitialState();
+            nextMove.state.CanMoveCueBall = true;
+        }
+        if (isBallContained(0, pocketedBalls) || firstTouchedBall == null) {
+            nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+            nextMove.state.CanMoveCueBall = true;
+        }
+        else if (pocketedBalls.length == 0) {
+            nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+        }
+        else if (pocketedBalls.length > 0) {
+            nextMove.turnIndex = currentTurnIndex;
+        }
+        else {
+            throw new TypeError("Unexpected condition during Break Shot");
+        }
+    }
+
+    function toBallType(color: AssignedBallType): BallType {
+        let bt: BallType = null;
+        switch (color) {
+            case AssignedBallType.Eight:
+                bt = BallType.Eight;
+                break;
+            case AssignedBallType.Solids:
+                bt = BallType.Solids;
+                break;
+            case AssignedBallType.Stripes:
+                bt = BallType.Stripes;
+                break;
+            default: ;
+        }
+        return bt;
+    }
+
+    function regularShot(nextMove: IMove, currentState: IState, currentTurnIndex: number,
+        pocketedBalls: Ball[], firstTouchedBall: Ball): void {
+        let currentPlayerColor = currentTurnIndex
+            ? currentState.Player2Color
+            : currentState.Player1Color;
+        if (pocketedBalls.length == 0) { // none pocketed
+            nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+            if (firstTouchedBall == null  // no ball touched
+                || (currentPlayerColor != AssignedBallType.Any // illegal ball touched first
+                    && firstTouchedBall.BallType != toBallType(currentPlayerColor))) {
+                nextMove.state.CanMoveCueBall = true;
+            }
+        }
+        else { // some balls pocketed
+            if (isBallContained(0, pocketedBalls)) { // the cue ball pocketed             
+                if (isBallContained(8, pocketedBalls)) { // if the 8 ball pocketed
+                    if (currentPlayerColor == AssignedBallType.Eight) {
+                        nextMove.turnIndex = -1; // ends game
+                        switch (currentTurnIndex) {
+                            case 0:
+                                nextMove.endMatchScores = [0, 1];
+                                break;
+                            case 1:
+                                nextMove.endMatchScores = [1, 0];
+                                break;
+                            default: ;
+                        }
+                    }
+                }
+                else { // if the 8 ball not pocketed
+                    nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+                    nextMove.state.CanMoveCueBall = true;
+                }
+            }
+            else { // the cue ball not pocketed
+                let pocketedSolidsCount: number = 0;
+                let pocketedStripesCount: number = 0;
+                for (let ball of currentState.SolidBalls) {
+                    if (ball.Pocketed) {
+                        pocketedSolidsCount++;
+                    }
+                }
+                for (let ball of currentState.StripedBalls) {
+                    if (ball.Pocketed) {
+                        pocketedStripesCount++;
+                    }
+                }
+                let eightBallIndex = 16;
+                if (isBallContained(8, pocketedBalls)) {
+                    eightBallIndex = getBallIndex(8, pocketedBalls);
+                }
+                let lastPocketedSolidIndex: number = 16;
+                let lastPocketedStripeIndex: number = 16;
+                let count: number = 0;
+                for (var ball of pocketedBalls) {
+                    if (ball.BallType == BallType.Solids) {
+                        lastPocketedSolidIndex = count;
+                    } else if (ball.BallType == BallType.Stripes) {
+                        lastPocketedStripeIndex = count;
+                    }
+                    count++;
+                }
+                if (pocketedSolidsCount == 7 && eightBallIndex > lastPocketedSolidIndex) {
+                    if (currentState.Player1Color == AssignedBallType.Solids) { // player 1
+                        nextMove.state.Player1Color = AssignedBallType.Eight;
+                    } else { // player 2
+                        nextMove.state.Player2Color = AssignedBallType.Eight;
+                    }
+                }
+                if (pocketedStripesCount == 7 && eightBallIndex > lastPocketedStripeIndex) {
+                    if (currentState.Player1Color == AssignedBallType.Stripes) { // player 1
+                        nextMove.state.Player1Color = AssignedBallType.Eight;
+                    } else { // player 2
+                        nextMove.state.Player2Color = AssignedBallType.Eight;
+                    }
+                }
+                if (isBallContained(8, pocketedBalls)) { // Eight ball pocketed
+                    nextMove.turnIndex = -1;
+                    if (currentTurnIndex == 0) {
+                        if (currentState.Player1Color == AssignedBallType.Eight) {
+                            nextMove.endMatchScores = [1, 0];
+                        }
+                        else {
+                            nextMove.endMatchScores = [0, 1];
+                        }
+                    }
+                    else {
+                        if (currentState.Player2Color == AssignedBallType.Eight) {
+                            nextMove.endMatchScores = [0, 1];
+                        }
+                        else {
+                            nextMove.endMatchScores = [1, 0];
+                        }
+                    }
+                }
+                else { // Eight ball not pocketed 
+                    if (currentPlayerColor == AssignedBallType.Any) {
+                        nextMove.turnIndex = currentTurnIndex;
+                        switch (currentTurnIndex) {
+                            case 0:
+                                nextMove.state.Player1Color =
+                                    toAssignedBallType(pocketedBalls[0].BallType);
+                                nextMove.state.Player2Color =
+                                    switchAssignedBallType(toAssignedBallType(pocketedBalls[0].BallType));
+                                break;
+                            case 1:
+                                nextMove.state.Player1Color =
+                                    switchAssignedBallType(toAssignedBallType(pocketedBalls[0].BallType));
+                                nextMove.state.Player2Color =
+                                    toAssignedBallType(pocketedBalls[0].BallType);
+                                break;
+                            default: ;
+                        }
+                    }
+                    else if (currentPlayerColor != AssignedBallType.Eight) { // not Any not Eight
+                        if (toBallType(currentPlayerColor) != firstTouchedBall.BallType) {
+                            nextMove.state.CanMoveCueBall = true;
+                            nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+                        } else {
+                            nextMove.turnIndex = currentTurnIndex;// no foul
+                        }
+                    }
+                    else { // currentPlayerColor is Eight.
+                        nextMove.state.CanMoveCueBall = true;
+                        nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+                    }
+                }
+            }
+        }
+    }
+
+    export function createMove(currentState: IState, currentTurnIndex: number): IMove {
         let nextMove: IMove = {
             endMatchScores: null, // changed later
             turnIndex: currentTurnIndex, // changed later
             state: angular.copy(currentState)   // changed later
-        };    // this will be returned as the next move
+        };
         nextMove.state.FirstMove = false;
-        nextMove.state.CanMoveCueBall = false;    // discontinuing the use of CanMoveCueBall property if it was in use
-        /** FIRST SHOT AFTER MOVE ~ after the break shot
-         * The following logic is ONLY for the move right after the "break" move
-         * 0) Check if the BLACK ball is potted => call the state from getInitialState and keep the turn and return 
-         *      ELSE
-         *          nextMove.state will copy ALL contents from the currentState
-         *          FirstMove=false AND:
-         * 1) Check if the cue ball is potted => return "CanMoveCueBall" and change the turn
-         * 2) Check if no balls are touched => return "CanMoveCueBall" and change the turn
-         * 3) Check if no balls are potted => change the turn
-         * 4) Check if balls are potted => keep the turn
-         */
-        let pocketedBalls = currentState.DeltaBalls.PocketedBalls;
-        let touchedFirst = currentState.DeltaBalls.TouchedBall;
-        if (currentState.FirstMove) {                            // state right after the BREAK shot
-            // 0)
-            if (isBallContained(8, pocketedBalls) != -1) {
-                nextMove.state = getInitialState();
-                nextMove.state.CanMoveCueBall = true;   // TODO: add a flag to tell the game.ts that it is a fresh start and the cue-ball movement must be limited again
-                nextMove.turnIndex = currentTurnIndex;  // giving the move back the the player who "broke the balls"
-                return nextMove;
-            }
-            // 1) && 2)
-            if ((isBallContained(0, pocketedBalls) != -1) || (touchedFirst == null)) {
-                nextMove.state.CanMoveCueBall = true;
-                nextMove.turnIndex = 1 - currentTurnIndex;
-                return nextMove;
-            }
-            // 3)
-            else if (pocketedBalls.length == 0) {
-                nextMove.turnIndex = 1 - currentTurnIndex;
-                return nextMove;
-            }
-            // 4)
-            else if (pocketedBalls.length > 0) {
-                nextMove.turnIndex = currentTurnIndex;
-                return nextMove;
-            }
-            // Unexpected condition
-            else {
-                throw new TypeError("Unexpected condition during Break Shot");
-            }
+        nextMove.state.CanMoveCueBall = false;
+
+        let pocketedBalls: Ball[] = currentState.DeltaBalls.PocketedBalls;
+        let firstTouchedBall: Ball = currentState.DeltaBalls.TouchedBall;
+
+        if (currentState.FirstMove) {
+            breakShot(nextMove, pocketedBalls, firstTouchedBall, currentTurnIndex);
+        }
+        else {
+            regularShot(nextMove, currentState, currentTurnIndex, pocketedBalls, firstTouchedBall);
         }
 
-        /** REGULAR SHOT
-         * The following logic is ONLY for the move after the "break" move
-         * 1) If BLACK ball is potted:       // WIN or LOSS situation
-         *      a) if the assigned ball is BLACK and the CUE Ball is NOT potted, current player wins
-         *      b) in ANY other condition the current player loses
-         *      the following logic (a-f) was replaced by the above (a-b) logic
-         *      a) if cue ball is also pocketed => this player loses
-         *      b) if player has other assigned balls left or is not assigned ANY color => this player loses
-         *      c) if there are any 'assigned color' balls pocketed after the BLACK in the pocketed queue => this player loses
-         *      d) if touchedFirst != assignedcolor OR !=BLACK => this player loses
-         *      e) if there are any balls potted after the BLACK => this player loses
-         *      f) this player Wins
-         * 
-         * 2) If no ball touched => return "CanMoveCueBall" and change the turn
-         * 3) If illegal ball touched (take care of ANY) => return "CanMoveCueBall" and change the turn
-         * 4) If no ball potted => change the turn
-         * 5) If Balls are potted:
-         *      a) if cue ball potted => return "CanMoveCueBall" and change the turn
-         *      b) if 'color not assigned' => assign the first ball potted, player keeps the turn
-         *      c) if ONLY illegal balls potted => ONLY change the turn ELSE keep the turn *     
-         * 6) If the player has pottedd all the his assigned balls, assign him the BallType 8 ; don't "RETURN"" though
-         */
-        else {
-            //~~ storing the player's color and his assigned balls
-            function getMyUsableColor(color: AssignedBallType): BallType {
-                if (color == AssignedBallType.Any)
-                    return null;
-                else if (color == AssignedBallType.Solids)
-                    return BallType.Solids;
-                else if (color == AssignedBallType.Stripes)
-                    return BallType.Stripes;
-                else if (color == AssignedBallType.Eight)
-                    return BallType.Eight;
-                return null;
-            }
-            //~~ Reverse of the above function
-            function getMyAssignableColor(col: BallType): AssignedBallType {
-                if (col == BallType.Solids)
-                    return AssignedBallType.Solids;
-                else if (col == BallType.Stripes)
-                    return AssignedBallType.Stripes;
-                else if (col == BallType.Eight)
-                    return AssignedBallType.Eight;
-                return null;
-            }
-            //~~ checking if a particular colored ball is pocketed
-            function isColorBallPocketed(usableColor: BallType, balls: Ball[]): boolean {
-                for (let ball of balls) {
-                    if (ball.BallType == myUsableColor)
-                        return true;
-                }
-                return false;
-            }
-            var myColor: AssignedBallType;   // the player's color of type AssignedBallType
-            var cueBallPotted: boolean = false;    // whether or not the cueBall was potted in this turn
-            if (isBallContained(0, pocketedBalls) != -1)    // Storing whether the cue ball is potted or not in a boolean variable/flag
-                cueBallPotted = true;
-            if (currentTurnIndex == 0) {
-                myColor = currentState.Player1Color;
-            } else {
-                myColor = currentState.Player2Color;
-            }
-            var myUsableColor = getMyUsableColor(myColor);// the player's color of type BallType
-            var myBalls: Ball[] = [], yourBalls: Ball[] = [], myRemainingBalls: Ball[] = [];
-            if (myColor != AssignedBallType.Any) {            // the concept of my_color and your_color has no meaning when the colors have not been assigned
-                if (myColor == AssignedBallType.Solids) {
-                    myBalls = currentState.SolidBalls;
-                    yourBalls = currentState.StripedBalls;
-                }
-                else {
-                    myBalls = currentState.StripedBalls;
-                    yourBalls = currentState.SolidBalls;
-                }
-                for (let ball of myBalls) {
-                    if (!ball.Pocketed)
-                        myRemainingBalls.push(ball);
-                }
-            }
-            // //  6)
-            // if(myRemainingBalls.length==0){
-            //     if(currentTurnIndex==0)
-            //         nextMove.state.Player1Color=AssignedBallType.Eight;
-            //     else
-            //         nextMove.state.Player2Color=AssignedBallType.Eight;
-            // }
-            //  1)
-            var blackIndex = isBallContained(8, pocketedBalls);
-            if (blackIndex != -1) {   // black ball is potted --
-                if (!cueBallPotted && myColor == AssignedBallType.Eight) {    // current player wins
-                    if (currentTurnIndex == 0) {
-                        nextMove.endMatchScores = [0, 1];
-                        nextMove.turnIndex = -1;
-                    }
-                    else {
-                        nextMove.endMatchScores = [1, 0];
-                        nextMove.turnIndex = -1;
-                    }
-                }
-                else {   // current player loses
-                    if (currentTurnIndex == 0) {
-                        nextMove.endMatchScores = [1, 0];
-                        nextMove.turnIndex = -1;
-                    }
-                    else {
-                        nextMove.endMatchScores = [0, 1];
-                        nextMove.turnIndex = -1;
-                    }
-                }
-                // // a)
-                // if(isBallContained(0,pocketedBalls)!=-1){
-                //     if(currentTurnIndex==0)
-                //         nextMove.endMatchScores=[0,1];
-                //     else
-                //         nextMove.endMatchScores=[1,0];
-                //     return nextMove;
-                // }
-                // // b)
-                // else if(myColor == AssignedBallType.Any || myRemainingBalls.length!=0){
-                //     if(currentTurnIndex==0)
-                //         nextMove.endMatchScores=[0,1];
-                //     else
-                //         nextMove.endMatchScores=[1,0];
-                //     return nextMove;
-                // }
-                // // c), e)
-                // else if(blackIndex != pocketedBalls.length-1){
-                //     if(currentTurnIndex==0)
-                //         nextMove.endMatchScores=[0,1];
-                //     else
-                //         nextMove.endMatchScores=[1,0];
-                //     return nextMove;
-                // }
-                // // d)
-                // else if(!(touchedFirst.BallType==myUsableColor || touchedFirst.BallType==BallType.Eight)){
-                //     if(currentTurnIndex==0)
-                //         nextMove.endMatchScores=[0,1];
-                //     else
-                //         nextMove.endMatchScores=[1,0];
-                //     return nextMove;
-                // }
-                // // f)
-                // else if(pocketedBalls.length==1){
-                //     if(currentTurnIndex==0)
-                //         nextMove.endMatchScores=[1,0];
-                //     else
-                //         nextMove.endMatchScores=[0,1];
-                //     return nextMove;
-                // }
-                // default unhandled condition wherer the current player loses
-                // else{
-                //     throw new TypeError("Unexpected condition during Winner determination");
-                // }
-            }
-            else {       // BLACK BALL not pocketed yet
-                //  2), 3)  // NO or ILLEGAL ball touched first
-                if (touchedFirst == null || (myColor != AssignedBallType.Any && touchedFirst.BallType != myUsableColor)) {
-                    nextMove.state.CanMoveCueBall = true;
-                    nextMove.turnIndex = 1 - currentTurnIndex;
-                    // return nextMove;
-                }
-                // 4) // Legal ball touched but none pocketed; simply change the turn..
-                else if (pocketedBalls.length == 0) {
-                    nextMove.turnIndex = 1 - currentTurnIndex;
-                    // return nextMove;
-                }
-                // 5)
-                else if (pocketedBalls.length > 0) {
-                    // a)
-                    if (cueBallPotted) {
-                        nextMove.state.CanMoveCueBall = true;
-                        nextMove.turnIndex = 1 - currentTurnIndex;
-                        // return nextMove;
-                    }
-                    // b)
-                    else if (myColor == AssignedBallType.Any) {
-                        nextMove.turnIndex = currentTurnIndex;  // current player keeps the turn
-                        //~~ Assigning the player his color
-                        if (currentTurnIndex == 0)
-                            nextMove.state.Player1Color = getMyAssignableColor(pocketedBalls[0].BallType);
-                        else
-                            nextMove.state.Player1Color = getMyAssignableColor(pocketedBalls[0].BallType);
-                        // return nextMove;
-                    }
-                    // c)
-                    else if (isColorBallPocketed(myUsableColor, pocketedBalls)) {
-                        nextMove.turnIndex = currentTurnIndex;             // keep the turn
-                        // return nextMove;
-                    }
-                    else if (!isColorBallPocketed(myUsableColor, pocketedBalls)) {
-                        nextMove.state.CanMoveCueBall = true;
-                        nextMove.turnIndex = 1 - currentTurnIndex;
-                        // return nextMove;
-                    }
-                    // default unhandled condition
-                    else {
-                        throw new TypeError("Unexpected condition during next turn assignment");
-                    }
-                }
-            }
-            //  6)
-            if (myRemainingBalls.length == 0) {
-                if (currentTurnIndex == 0)
-                    nextMove.state.Player1Color = AssignedBallType.Eight;
-                else
-                    nextMove.state.Player2Color = AssignedBallType.Eight;
-            }
-        }
         return nextMove;
     }
 }
