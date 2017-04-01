@@ -82,6 +82,7 @@ module game {
   var _boardMinY: number;
   var _boardMaxY: number
   var _mouseDistance = 0; // mouse distance from cue ball
+  var _forceFraction = 0; // oscillates with time
   var _gameStage: GameStage;
   var _firstTouchBall: Ball = null;
   var _pocketedBalls: Ball[] = [];
@@ -93,6 +94,7 @@ module game {
 
   function resetGlobals() {
     _mouseDistance = 0;
+    _forceFraction = 0;
     _firstTouchBall = null;
     _pocketedBalls = [];
     solidBallModels = [];
@@ -103,8 +105,8 @@ module game {
   }
 
   function shootClick(cueBall: Matter.Body) {
-    let force: number = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
-
+    // let force: number = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
+    let force = Math.abs(_forceFraction * GameplayConsts.ClickForceMax);
     console.log("force mag: ", force);
     console.log("mouse distance: ", _mouseDistance);
 
@@ -672,7 +674,7 @@ module game {
       if (_gameStage == GameStage.Aiming) {
         if (isMouseWithinShootRange()) {
           drawGuideLine(_render.context, 1000, 4, "white", 0.3, true); // directional guideline
-          drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4, false); // current force guideline
+          drawGuideLine(_render.context, _forceFraction * GameplayConsts.ClickDistanceLimit, 5, "red", 0.4, false); // current force guideline
           drawCueStick(_render.context);
         }
         drawGuideCircle(_render.context);
@@ -684,6 +686,8 @@ module game {
     });
     // EVENT: after every engine update check if all bodies are sleeping
     Matter.Events.on(_engine, "afterUpdate", function (event) {
+      // update force fraction
+      _forceFraction = Math.abs(new Date().getTime() % 4000 - 2000) / 2000;
       // send return state when all bodies are sleeping
       if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
         _gameStage = GameStage.Finalized;
