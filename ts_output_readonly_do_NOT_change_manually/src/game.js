@@ -53,7 +53,6 @@ var game;
     var _boardMinY;
     var _boardMaxY;
     var _mouseDistance = 0; // mouse distance from cue ball
-    var _forceFraction = 0; // oscillates with time
     var _gameStage;
     var _firstTouchBall = null;
     var _pocketedBalls = [];
@@ -64,7 +63,6 @@ var game;
     var stripedBallModels = [];
     function resetGlobals() {
         _mouseDistance = 0;
-        _forceFraction = 0;
         _firstTouchBall = null;
         _pocketedBalls = [];
         solidBallModels = [];
@@ -77,8 +75,7 @@ var game;
             Render.stop(_render);
     }
     function shootClick(cueBall) {
-        // let force: number = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
-        var force = Math.abs(_forceFraction * GameplayConsts.ClickForceMax);
+        var force = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
         console.log("force mag: ", force);
         console.log("mouse distance: ", _mouseDistance);
         Matter.Body.applyForce(cueBall, cueBall.position, {
@@ -636,7 +633,7 @@ var game;
             if (_gameStage == GameStage.Aiming) {
                 if (isMouseWithinShootRange()) {
                     drawGuideLine(_render.context, 1000, 4, "white", 0.3, true); // directional guideline
-                    drawGuideLine(_render.context, _forceFraction * GameplayConsts.ClickDistanceLimit, 5, "red", 0.4, false); // current force guideline
+                    drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4, false); // current force guideline
                     drawCueStick(_render.context);
                 }
                 drawGuideCircle(_render.context);
@@ -648,8 +645,6 @@ var game;
         });
         // EVENT: after every engine update check if all bodies are sleeping
         Matter.Events.on(_engine, "afterUpdate", function (event) {
-            // update force fraction
-            _forceFraction = Math.abs(new Date().getTime() % 4000 - 2000) / 2000;
             // send return state when all bodies are sleeping
             if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
                 _gameStage = GameStage.Finalized;
