@@ -429,7 +429,7 @@ module game {
     context.save();
     context.strokeStyle = "gold";
     context.lineWidth = 3;
-    context.globalAlpha = 0.4 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
+    context.globalAlpha = 0.5 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
     for (let model of ballModelsToHighlight) {
       if (model.Ball.Pocketed) continue;
       context.beginPath();

@@ -327,6 +327,19 @@ var game;
                 context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number, minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
                 context.restore();
             }
+            // let res = getRaycastPoint(_world.bodies, raycastStart, direction, length);
+            // if (res) {
+            //   endPoint = { x: res.Point.x - direction.x, y: res.Point.y - direction.y };
+            //   // draw the mock cue ball
+            //   context.save();
+            //   context.strokeStyle = "white";
+            //   context.lineWidth = 2;
+            //   context.globalAlpha = 0.3;
+            //   context.beginPath();
+            //   context.arc(endPoint.x, endPoint.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
+            //   context.stroke();
+            //   context.restore();
+            // }
         }
         context.save();
         context.globalAlpha = alpha;
@@ -376,7 +389,7 @@ var game;
         context.save();
         context.strokeStyle = "gold";
         context.lineWidth = 3;
-        context.globalAlpha = 0.4 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
+        context.globalAlpha = 0.5 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
         for (var _i = 0, ballModelsToHighlight_1 = ballModelsToHighlight; _i < ballModelsToHighlight_1.length; _i++) {
             var model = ballModelsToHighlight_1[_i];
             if (model.Ball.Pocketed)

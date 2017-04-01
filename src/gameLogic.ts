@@ -438,10 +438,10 @@ module GameLogic {
                     }
                 }
                 else { // if the 8 ball not pocketed
-                    if (currentPlayerColor == AssignedBallType.Any && pocketedBalls.length > 2) {
+                    if (currentPlayerColor == AssignedBallType.Any && pocketedBalls.length > 1) {
                         let firstPocketedColoredBallType: BallType;
                         let isSolidNotStriped: boolean;
-                        if (firstTouchedBall.BallType == BallType.Cue) { // the second ball is colored ball
+                        if (pocketedBalls[0].BallType == BallType.Cue) { // the second ball is colored ball
                             firstPocketedColoredBallType = pocketedBalls[1].BallType;
                         }
                         else { // the first ball is colored ball

@@ -348,10 +348,10 @@ var GameLogic;
                     }
                 }
                 else {
-                    if (currentPlayerColor == AssignedBallType.Any && pocketedBalls.length > 2) {
+                    if (currentPlayerColor == AssignedBallType.Any && pocketedBalls.length > 1) {
                         var firstPocketedColoredBallType = void 0;
                         var isSolidNotStriped = void 0;
-                        if (firstTouchedBall.BallType == BallType.Cue) {
+                        if (pocketedBalls[0].BallType == BallType.Cue) {
                             firstPocketedColoredBallType = pocketedBalls[1].BallType;
                         }
                         else {
