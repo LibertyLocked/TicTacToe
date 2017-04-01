@@ -438,6 +438,31 @@ module GameLogic {
                     }
                 }
                 else { // if the 8 ball not pocketed
+                    if (currentPlayerColor == AssignedBallType.Any && pocketedBalls.length > 2) {
+                        let firstPocketedColoredBallType: BallType;
+                        let isSolidNotStriped: boolean;
+                        if (firstTouchedBall.BallType == BallType.Cue) { // the second ball is colored ball
+                            firstPocketedColoredBallType = pocketedBalls[1].BallType;
+                        }
+                        else { // the first ball is colored ball
+                            firstPocketedColoredBallType = pocketedBalls[0].BallType;
+                        }
+                        if (firstPocketedColoredBallType == BallType.Solids) {
+                            isSolidNotStriped = true;
+                        }
+                        else {
+                            isSolidNotStriped = false;
+                        }
+                        if (isSolidNotStriped && currentTurnIndex == 0
+                            || (!isSolidNotStriped && currentTurnIndex == 1)) {
+                            nextMove.state.Player1Color = AssignedBallType.Solids;
+                            nextMove.state.Player2Color = AssignedBallType.Stripes;
+                        } else {
+                            nextMove.state.Player1Color = AssignedBallType.Stripes;
+                            nextMove.state.Player2Color = AssignedBallType.Solids;
+                        }
+                    }
+
                     nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
                     nextMove.state.CanMoveCueBall = true;
                 }
