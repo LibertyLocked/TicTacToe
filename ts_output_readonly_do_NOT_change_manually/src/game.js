@@ -2,7 +2,7 @@
 var GameplayConsts;
 (function (GameplayConsts) {
     GameplayConsts.CollisionCategoryCue = 0x0001;
-    GameplayConsts.CollisionCategoryNormalBalls = 0x0002;
+    GameplayConsts.CollisionCategoryColoredBalls = 0x0002;
     GameplayConsts.CollisionMaskAllBalls = 0x0003;
     GameplayConsts.CollisionMaskMouse = 0x0000;
     GameplayConsts.BallRestitution = 0.9;
@@ -11,7 +11,7 @@ var GameplayConsts;
     GameplayConsts.BorderThicknessOut = 50;
     GameplayConsts.BallTextureSize = 128; // ball textures are 128x128
     GameplayConsts.ClickDistanceLimit = 150;
-    GameplayConsts.ClickForceMax = 0.04;
+    GameplayConsts.ClickForceMax = 0.036;
 })(GameplayConsts || (GameplayConsts = {}));
 ;
 var game;
@@ -75,14 +75,10 @@ var game;
             Render.stop(_render);
     }
     function shootClick(cueBall) {
-        var forcePosition = {
-            x: cueBall.position.x + 1.0 * Math.cos(cueBall.angle),
-            y: cueBall.position.y + 1.0 * Math.sin(cueBall.angle)
-        };
         var force = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
         console.log("force mag: ", force);
-        console.log("render len: ", _mouseDistance);
-        Matter.Body.applyForce(cueBall, forcePosition, {
+        console.log("mouse distance: ", _mouseDistance);
+        Matter.Body.applyForce(cueBall, cueBall.position, {
             x: force * Math.cos(cueBall.angle),
             y: force * Math.sin(cueBall.angle)
         });
@@ -95,23 +91,21 @@ var game;
     }
     function handleBallBallCollision(bodyA, bodyB) {
         if (!_firstTouchBall) {
-            var ballNumberA = Number(bodyA.label.split(' ')[1]);
-            var ballNumberB = Number(bodyB.label.split(' ')[1]);
-            if (ballNumberA != 0 && ballNumberB == 0) {
+            var ballA = getBallModelFromBody(bodyA).Ball;
+            var ballB = getBallModelFromBody(bodyB).Ball;
+            if (ballA.BallType != BallType.Cue && ballB.BallType == BallType.Cue) {
                 // B is cue
-                _firstTouchBall = getBallModelFromBody(bodyA).Ball;
+                _firstTouchBall = ballA;
             }
-            else if (ballNumberA == 0 && ballNumberB != 0) {
+            else if (ballA.BallType == BallType.Cue && ballB.BallType != BallType.Cue) {
                 // A is cue
-                _firstTouchBall = getBallModelFromBody(bodyB).Ball;
+                _firstTouchBall = ballB;
             }
         }
     }
     function handlePocketBallCollision(pocketBody, ballBody) {
         // destroy the ball body
         World.remove(_world, ballBody);
-        // get the ball number
-        var ballNumber = Number(ballBody.label.split(' ')[1]);
         // create the ball model and add to pocketed balls
         var theBall = getBallModelFromBody(ballBody).Ball;
         theBall.Pocketed = true;
@@ -123,7 +117,7 @@ var game;
         var ysq = Math.pow(vec1.y - vec2.y, 2);
         return Math.sqrt(xsq + ysq);
     }
-    // creates cue ball view-model from Ball. does not add to world
+    // creates cue ball view-model from Ball
     function createCueBallModel(cueBall) {
         var newCueModel = {
             Ball: cueBall, Body: Bodies.circle(cueBall.Position.X, cueBall.Position.Y, cueBall.Radius, {
@@ -136,39 +130,47 @@ var game;
         };
         return newCueModel;
     }
+    function createBallModel(ball, collisionCategory, collisionMask) {
+        var textureScale = ball.Radius * 2 / GameplayConsts.BallTextureSize;
+        var newBallModel = {
+            Ball: ball, Body: Bodies.circle(ball.Position.X, ball.Position.Y, ball.Radius, {
+                isStatic: false,
+                collisionFilter: { category: collisionCategory, mask: collisionMask },
+                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
+                render: { sprite: { texture: 'imgs/' + ball.Number + '.png', xScale: textureScale, yScale: textureScale } },
+                label: 'Ball ' + ball.Number
+            })
+        };
+        return newBallModel;
+    }
     // constructs a rectangle body as border, from pocket1 to pocket2
-    function createBorderBody(pocket1, pocket2, leftOrRight, leftOrTop) {
+    function createBorderBody(leftOrRight, leftOrTop) {
         var x, y, width, height;
         var thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
         var thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
         if (leftOrRight) {
-            x = pocket1.Position.X;
-            y = (pocket1.Position.Y + pocket2.Position.Y) / 2.0;
-            if (leftOrTop)
-                x -= thicknessOffset;
-            else
-                x += thicknessOffset;
+            y = _render.canvas.height / 2;
+            height = _render.canvas.height;
             width = thicknessTotal;
-            height = pocket2.Position.Y - pocket1.Position.Y;
+            x = leftOrTop ? _boardMinX - thicknessOffset : _boardMaxX + thicknessOffset;
         }
         else {
-            x = (pocket1.Position.X + pocket2.Position.X) / 2.0;
-            y = pocket1.Position.Y;
-            if (leftOrTop)
-                y -= thicknessOffset;
-            else
-                y += thicknessOffset;
-            width = _render.canvas.width; // horizontal borders are full width
+            y = leftOrTop ? _boardMinY - thicknessOffset : _boardMaxY + thicknessOffset;
+            x = _render.canvas.width / 2;
             height = thicknessTotal;
+            width = _render.canvas.width;
         }
-        return Bodies.rectangle(x, y, width, height, {
+        var body = Bodies.rectangle(x, y, width, height, {
             isStatic: true,
             render: { fillStyle: '#825201', strokeStyle: 'black' },
             label: 'Border'
         });
+        return body;
     }
     // gets the view-model associated with the body
     function getBallModelFromBody(ballBody) {
+        if (ballBody.label.indexOf('Ball') < 0)
+            return null; // not a ball
         var ballNumber = Number(ballBody.label.split(' ')[1]);
         if (ballNumber == 0) {
             return cueBallModel;
@@ -203,6 +205,10 @@ var game;
     }
     // moves the cue ball and recreates the cue ball body and model
     function moveCueBall(pos, useStartLine) {
+        // do not allow placing inside another body
+        var bodies = Matter.Query.point(Matter.Composite.allBodies(_world), pos);
+        if (bodies.length > 0)
+            return false;
         World.remove(_world, cueBallModel.Body);
         var y;
         if (useStartLine) {
@@ -217,6 +223,11 @@ var game;
         cueBallModel = createCueBallModel(_gameState.CueBall);
         World.add(_world, cueBallModel.Body);
         _gameState.CueBall.Pocketed = false;
+        return true;
+    }
+    function isMouseWithinShootRange() {
+        return _mouseDistance <= GameplayConsts.ClickDistanceLimit &&
+            _mouseDistance >= cueBallModel.Ball.Radius;
     }
     function finalize() {
         // send the move over network here
@@ -257,13 +268,66 @@ var game;
         // send the move over network
         gameService.makeMove(newMove, null);
     }
-    function drawGuideLine(context, length, width, style, alpha) {
+    function getRaycastPoint(bodies, start, r, dist) {
+        var normRay = Matter.Vector.normalise(r);
+        var ray = normRay;
+        var point = Matter.Vector.add(ray, start);
+        for (var i = 0; i < dist; i++) {
+            ray = Matter.Vector.mult(normRay, i);
+            ray = Matter.Vector.add(start, ray);
+            var bod = Matter.Query.point(bodies, ray)[0];
+            if (bod) {
+                return { Point: ray, Body: bod };
+            }
+        }
+        return null;
+    }
+    function drawGuideLine(context, length, width, style, alpha, raycast) {
         var cueBody = cueBallModel.Body;
-        var startPoint = { x: cueBody.position.x, y: cueBody.position.y };
+        var startPoint = cueBody.position;
         var endPoint = {
             x: cueBody.position.x + length * Math.cos(cueBody.angle),
             y: cueBody.position.y + length * Math.sin(cueBody.angle)
         };
+        if (raycast) {
+            var direction = { x: Math.cos(cueBody.angle) * cueBallModel.Ball.Radius, y: Math.sin(cueBody.angle) * cueBallModel.Ball.Radius };
+            var raycastStart = { x: startPoint.x + direction.x, y: startPoint.y + direction.y };
+            var collisions = Matter.Query.ray(_world.bodies, raycastStart, endPoint, cueBallModel.Ball.Radius * 2);
+            var minDist = length;
+            var minDistModel = null;
+            for (var _i = 0, collisions_1 = collisions; _i < collisions_1.length; _i++) {
+                var collision = collisions_1[_i];
+                var body = collision.bodyA;
+                var ballModel = getBallModelFromBody(body);
+                if (!ballModel)
+                    continue; // only collide with balls
+                var dist = distanceBetweenVectors(body.position, cueBallModel.Body.position);
+                if (dist <= minDist) {
+                    minDist = dist;
+                    minDistModel = ballModel;
+                }
+            }
+            if (minDistModel) {
+                endPoint = {
+                    x: cueBody.position.x + minDist * Math.cos(cueBody.angle),
+                    y: cueBody.position.y + minDist * Math.sin(cueBody.angle)
+                };
+                // highlight the ball it's going to hit
+                context.save();
+                context.strokeStyle = "white";
+                context.lineWidth = 2;
+                context.globalAlpha = 0.5;
+                context.beginPath();
+                context.arc(minDistModel.Body.position.x, minDistModel.Body.position.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
+                context.stroke();
+                context.font = '16px serif';
+                context.globalAlpha = 0.8;
+                context.textAlign = "center";
+                context.textBaseline = "bottom";
+                context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number, minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
+                context.restore();
+            }
+        }
         context.save();
         context.globalAlpha = alpha;
         context.beginPath();
@@ -282,7 +346,8 @@ var game;
         context.globalAlpha = 0.3;
         context.setLineDash([Math.PI * 5, Math.PI * 10]);
         context.beginPath();
-        context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y, GameplayConsts.ClickDistanceLimit, 0, 2 * Math.PI);
+        var angleOffset = new Date().getTime() * 0.0004 % (2 * Math.PI);
+        context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y, GameplayConsts.ClickDistanceLimit, angleOffset, 2 * Math.PI + angleOffset);
         context.stroke();
         context.restore();
     }
@@ -297,13 +362,14 @@ var game;
     function drawGameHUD(context) {
         context.save();
         var fontSize = 16;
-        context.font = "16px Arial";
-        context.fillStyle = "white";
+        context.font = fontSize + "px Arial";
+        context.textBaseline = "top";
         // text on the left
         var textLeft = "";
         switch (_gameStage) {
             case GameStage.PlacingCue:
                 textLeft = "Click to place cue ball";
+                context.font = fontSize * (1 + 0.1 * (Math.sin(new Date().getTime() * 0.005) + 2)) + "px Arial";
                 break;
             case GameStage.Aiming:
                 textLeft = "Drag behind cue ball to aim";
@@ -321,8 +387,9 @@ var game;
         }
         context.fillStyle = "yellow";
         context.textAlign = "left";
-        context.fillText(textLeft, 0, fontSize);
+        context.fillText(textLeft, 0, 0);
         // text on the right
+        context.font = fontSize + "px Arial";
         var textRight = "";
         if ((_gameStage == GameStage.PlacingCue || _gameStage == GameStage.Aiming || _gameStage == GameStage.Finalized)) {
             var designatedGroup = '';
@@ -341,18 +408,17 @@ var game;
         }
         context.fillStyle = "white";
         context.textAlign = "right";
-        context.fillText(textRight, context.canvas.width, fontSize);
+        context.fillText(textRight, context.canvas.width, 0);
         // show mouse coords on screen bottom
         if (_mouse) {
+            context.font = fontSize + "px Arial";
             var coordText = "(" + _mouse.position.x.toFixed(0) + "," + _mouse.position.y.toFixed(0) + ")";
             context.textAlign = "center";
-            context.fillText(coordText, context.canvas.width / 2, context.canvas.height - fontSize);
+            context.textBaseline = "bottom";
+            context.fillText(coordText, context.canvas.width / 2, context.canvas.height);
         }
         context.restore();
     }
-    // ========================================
-    // multiplayer gaming platform stuff
-    // ========================================
     function init($rootScope_, $timeout_) {
         game.$rootScope = $rootScope_;
         game.$timeout = $timeout_;
@@ -426,18 +492,16 @@ var game;
         renderOptions.background = 'green';
         // create borders
         var pockets = _gameState.PoolBoard.Pockets;
-        World.add(_world, [
-            createBorderBody(pockets[0], pockets[3], false, true),
-            createBorderBody(pockets[2], pockets[5], false, false),
-            createBorderBody(pockets[1], pockets[0], true, true),
-            createBorderBody(pockets[1], pockets[2], true, true),
-            createBorderBody(pockets[4], pockets[3], true, false),
-            createBorderBody(pockets[4], pockets[5], true, false),
-        ]);
         _boardMinY = pockets[0].Position.Y;
         _boardMaxY = pockets[2].Position.Y;
         _boardMinX = pockets[1].Position.X;
         _boardMaxX = pockets[4].Position.X;
+        World.add(_world, [
+            createBorderBody(false, true),
+            createBorderBody(true, true),
+            createBorderBody(false, false),
+            createBorderBody(true, false),
+        ]);
         // create pockets
         for (var _i = 0, _a = _gameState.PoolBoard.Pockets; _i < _a.length; _i++) {
             var pocket = _a[_i];
@@ -454,45 +518,24 @@ var game;
         if (!_gameState.CueBall.Pocketed && !_gameState.CanMoveCueBall)
             World.add(_world, cueBallModel.Body);
         // eight ball
-        eightBallModel = {
-            Ball: _gameState.EightBall,
-            Body: Bodies.circle(_gameState.EightBall.Position.X, _gameState.EightBall.Position.Y, _gameState.EightBall.Radius, {
-                isStatic: false,
-                collisionFilter: { category: GameplayConsts.CollisionCategoryCue, mask: GameplayConsts.CollisionMaskAllBalls },
-                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
-                render: { sprite: { texture: 'imgs/8.png', xScale: textureScale, yScale: textureScale } },
-                label: 'Ball 8'
-            })
-        };
+        eightBallModel = createBallModel(_gameState.EightBall, GameplayConsts.CollisionCategoryColoredBalls, GameplayConsts.CollisionMaskAllBalls);
         if (!_gameState.EightBall.Pocketed)
             World.add(_world, eightBallModel.Body);
         // solid balls
         for (var _b = 0, _c = _gameState.SolidBalls; _b < _c.length; _b++) {
             var ball = _c[_b];
-            var theBallBody = Bodies.circle(ball.Position.X, ball.Position.Y, ball.Radius, {
-                isStatic: false,
-                collisionFilter: { category: GameplayConsts.CollisionCategoryNormalBalls, mask: GameplayConsts.CollisionMaskAllBalls },
-                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
-                render: { sprite: { texture: 'imgs/' + String(ball.Number) + '.png', xScale: textureScale, yScale: textureScale } },
-                label: 'Ball ' + String(ball.Number)
-            });
+            var ballModel = createBallModel(ball, GameplayConsts.CollisionCategoryColoredBalls, GameplayConsts.CollisionMaskAllBalls);
             if (!ball.Pocketed)
-                World.add(_world, theBallBody);
-            solidBallModels.push({ Ball: ball, Body: theBallBody });
+                World.add(_world, ballModel.Body);
+            solidBallModels.push(ballModel);
         }
         // striped balls
         for (var _d = 0, _e = _gameState.StripedBalls; _d < _e.length; _d++) {
             var ball = _e[_d];
-            var theBallBody = Bodies.circle(ball.Position.X, ball.Position.Y, ball.Radius, {
-                isStatic: false,
-                collisionFilter: { category: GameplayConsts.CollisionCategoryNormalBalls, mask: GameplayConsts.CollisionMaskAllBalls },
-                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
-                render: { sprite: { texture: 'imgs/' + String(ball.Number) + '.png', xScale: textureScale, yScale: textureScale } },
-                label: 'Ball ' + String(ball.Number)
-            });
+            var ballModel = createBallModel(ball, GameplayConsts.CollisionCategoryColoredBalls, GameplayConsts.CollisionMaskAllBalls);
             if (!ball.Pocketed)
-                World.add(_world, theBallBody);
-            stripedBallModels.push({ Ball: ball, Body: theBallBody });
+                World.add(_world, ballModel.Body);
+            stripedBallModels.push(ballModel);
         }
         // add mouse control
         _mouse = Mouse.create(_render.canvas);
@@ -504,8 +547,7 @@ var game;
             var mouseUpPosition = event.mouse.mouseupPosition;
             if (_gameStage == GameStage.Aiming /* && isHumanTurn() */) {
                 // only shoot cue ball when the mouse is around the cue ball
-                if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
-                    _mouseDistance >= cueBallModel.Ball.Radius) {
+                if (isMouseWithinShootRange()) {
                     _gameStage = GameStage.CueHit;
                     shootClick(cueBallModel.Body);
                 }
@@ -513,8 +555,9 @@ var game;
             else if (_gameStage == GameStage.PlacingCue) {
                 // place the cue ball at mouse position
                 // recreate the cue ball model (body)
-                moveCueBall(mouseUpPosition, _gameState.FirstMove);
-                _gameStage = GameStage.Aiming;
+                if (moveCueBall(mouseUpPosition, _gameState.FirstMove)) {
+                    _gameStage = GameStage.Aiming;
+                }
             }
         });
         // EVENT: handle pocket and ball collision
@@ -533,7 +576,7 @@ var game;
             }
         });
         // EVENT: update
-        Matter.Events.on(_render, 'afterRender', function () {
+        Matter.Events.on(_render, 'afterRender', function (event) {
             // update _renderLength (the distance between mouse and cue body)
             var cuePosition = cueBallModel.Body.position;
             var horizontalDistance = cuePosition.x - _mouse.position.x;
@@ -546,10 +589,9 @@ var game;
             }
             // draw the guidelines, cue stick, guide circle
             if (_gameStage == GameStage.Aiming) {
-                if (_mouseDistance <= GameplayConsts.ClickDistanceLimit &&
-                    _mouseDistance >= cueBallModel.Ball.Radius) {
-                    drawGuideLine(_render.context, 1000, 4, "white", 0.3); // directional guideline
-                    drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4); // current force guideline
+                if (isMouseWithinShootRange()) {
+                    drawGuideLine(_render.context, 1000, 4, "white", 0.3, true); // directional guideline
+                    drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4, false); // current force guideline
                     drawCueStick(_render.context);
                 }
                 drawGuideCircle(_render.context);
