@@ -215,7 +215,10 @@ var GameLogic;
         var FirstMove = true;
         var Player1Color = AssignedBallType.Any;
         var Player2Color = AssignedBallType.Any;
-        var DeltaBalls = null;
+        var DeltaBalls = {
+            PocketedBalls: [],
+            TouchedBall: null,
+        };
         return {
             SolidBalls: solidBalls,
             StripedBalls: StripeBalls,

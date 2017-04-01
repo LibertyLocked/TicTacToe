@@ -1,12 +1,4 @@
 ;
-// the game stage
-var GameStage;
-(function (GameStage) {
-    GameStage[GameStage["PlacingCue"] = 1] = "PlacingCue";
-    GameStage[GameStage["Aiming"] = 2] = "Aiming";
-    GameStage[GameStage["CueHit"] = 3] = "CueHit";
-    GameStage[GameStage["Finalized"] = 4] = "Finalized";
-})(GameStage || (GameStage = {}));
 var GameplayConsts;
 (function (GameplayConsts) {
     GameplayConsts.CollisionCategoryCue = 0x0001;
@@ -24,6 +16,14 @@ var GameplayConsts;
 ;
 var game;
 (function (game) {
+    // the game stage
+    var GameStage;
+    (function (GameStage) {
+        GameStage[GameStage["PlacingCue"] = 1] = "PlacingCue";
+        GameStage[GameStage["Aiming"] = 2] = "Aiming";
+        GameStage[GameStage["CueHit"] = 3] = "CueHit";
+        GameStage[GameStage["Finalized"] = 4] = "Finalized";
+    })(GameStage || (GameStage = {}));
     game.$rootScope = null;
     game.$timeout = null;
     // Global variables are cleared when getting updateUI.
@@ -571,16 +571,16 @@ var game;
     }
     game.updateUI = updateUI;
     function maybeSendComputerMove() {
-        if (!isComputerTurn())
-            return;
-        var currentMove = {
-            endMatchScores: game.currentUpdateUI.endMatchScores,
-            state: game.currentUpdateUI.state,
-            turnIndex: game.currentUpdateUI.turnIndex,
-        };
-        var move = aiService.findComputerMove(currentMove);
-        log.info("Computer move: ", move);
-        gameService.makeMove(move, null);
+        // TODO: AI move
+        // if (!isComputerTurn()) return;
+        // let currentMove: IMove = {
+        //   endMatchScores: currentUpdateUI.endMatchScores,
+        //   state: currentUpdateUI.state,
+        //   turnIndex: currentUpdateUI.turnIndex,
+        // }
+        // let move = aiService.findComputerMove(currentMove);
+        // log.info("Computer move: ", move);
+        // gameService.makeMove(move, null);
     }
     function isFirstMove() {
         return !game.currentUpdateUI.state;

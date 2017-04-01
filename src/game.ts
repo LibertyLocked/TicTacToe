@@ -5,17 +5,8 @@ interface SupportedLanguages {
   hi: string, es: string,
 };
 
-// the game stage
-enum GameStage {
-    PlacingCue = 1, // player is placing the cue ball
-    Aiming, // player is ready to hit the cue ball
-    CueHit, // player has hit the cue ball
-    Finalized, // game state is sent over network
-}
-
-interface BallModel {
-    Ball: Ball,
-    Body: Matter.Body,
+interface IProposalData {
+  
 }
 
 module GameplayConsts {
@@ -33,6 +24,19 @@ module GameplayConsts {
 };
 
 module game {
+  // the game stage
+  enum GameStage {
+      PlacingCue = 1, // player is placing the cue ball
+      Aiming, // player is ready to hit the cue ball
+      CueHit, // player has hit the cue ball
+      Finalized, // game state is sent over network
+  }
+
+  interface BallModel {
+      Ball: Ball,
+      Body: Matter.Body,
+  }
+
   export let $rootScope: angular.IScope = null;
   export let $timeout: angular.ITimeoutService = null;
 
@@ -164,7 +168,7 @@ module game {
 
   // constructs a rectangle body as border, from pocket1 to pocket2
   function createBorderBody(pocket1: Pocket, pocket2: Pocket, leftOrRight: boolean, leftOrTop: boolean): Matter.Body {
-    let x, y, width, height: number;
+    let x: number, y: number, width: number, height: number;
     let thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
     let thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
     if (leftOrRight) {
@@ -601,15 +605,16 @@ module game {
   }
 
   function maybeSendComputerMove() {
-    if (!isComputerTurn()) return;
-    let currentMove: IMove = {
-      endMatchScores: currentUpdateUI.endMatchScores,
-      state: currentUpdateUI.state,
-      turnIndex: currentUpdateUI.turnIndex,
-    }
-    let move = aiService.findComputerMove(currentMove);
-    log.info("Computer move: ", move);
-    gameService.makeMove(move, null);
+    // TODO: AI move
+    // if (!isComputerTurn()) return;
+    // let currentMove: IMove = {
+    //   endMatchScores: currentUpdateUI.endMatchScores,
+    //   state: currentUpdateUI.state,
+    //   turnIndex: currentUpdateUI.turnIndex,
+    // }
+    // let move = aiService.findComputerMove(currentMove);
+    // log.info("Computer move: ", move);
+    // gameService.makeMove(move, null);
   }
 
   function isFirstMove(): boolean {

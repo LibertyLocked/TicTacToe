@@ -297,7 +297,10 @@ module GameLogic {
         let FirstMove = true;
         let Player1Color = AssignedBallType.Any;
         let Player2Color = AssignedBallType.Any;
-        let DeltaBalls = null;
+        let DeltaBalls: ReturnState = {
+            PocketedBalls: [],
+            TouchedBall: null,
+        };
 
         return {
             SolidBalls: solidBalls,
