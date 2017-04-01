@@ -359,6 +359,35 @@ var game;
         context.drawImage(_stickImg, -_stickImg.width - _mouseDistance, -_stickImg.height / 2);
         context.restore();
     }
+    function drawHightlightBalls(context) {
+        var playerColor = game.currentUpdateUI.yourPlayerIndex === 0 ? _gameState.Player1Color : _gameState.Player2Color;
+        var ballModelsToHighlight;
+        if (playerColor == AssignedBallType.Solids) {
+            ballModelsToHighlight = solidBallModels;
+        }
+        else if (playerColor == AssignedBallType.Stripes) {
+            ballModelsToHighlight = stripedBallModels;
+        }
+        else if (playerColor == AssignedBallType.Eight) {
+            ballModelsToHighlight.push(eightBallModel);
+        }
+        if (!ballModelsToHighlight)
+            return;
+        context.save();
+        context.strokeStyle = "gold";
+        context.lineWidth = 3;
+        context.globalAlpha = 0.4 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
+        for (var _i = 0, ballModelsToHighlight_1 = ballModelsToHighlight; _i < ballModelsToHighlight_1.length; _i++) {
+            var model = ballModelsToHighlight_1[_i];
+            if (model.Ball.Pocketed)
+                continue;
+            context.beginPath();
+            context.arc(model.Body.position.x, model.Body.position.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
+            context.fill();
+            context.stroke();
+        }
+        context.restore();
+    }
     function drawGameHUD(context) {
         context.save();
         var fontSize = 16;
@@ -369,7 +398,7 @@ var game;
         switch (_gameStage) {
             case GameStage.PlacingCue:
                 textLeft = "Click to place cue ball";
-                context.font = fontSize * (1 + 0.1 * (Math.sin(new Date().getTime() * 0.005) + 2)) + "px Arial";
+                context.font = fontSize * (1 + 0.1 * (Math.sin(new Date().getTime() * 0.005) + 1)) + "px Arial";
                 break;
             case GameStage.Aiming:
                 textLeft = "Drag behind cue ball to aim";
@@ -598,6 +627,8 @@ var game;
             }
             // always render game HUD
             drawGameHUD(_render.context);
+            // always hightlight my assigned balls
+            drawHightlightBalls(_render.context);
         });
         // EVENT: after every engine update check if all bodies are sleeping
         Matter.Events.on(_engine, "afterUpdate", function (event) {

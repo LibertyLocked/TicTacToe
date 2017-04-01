@@ -415,6 +415,31 @@ module game {
     context.restore();
   }
 
+  function drawHightlightBalls(context: CanvasRenderingContext2D) {
+    let playerColor = currentUpdateUI.yourPlayerIndex === 0 ? _gameState.Player1Color : _gameState.Player2Color;
+    let ballModelsToHighlight: BallModel[];
+    if (playerColor == AssignedBallType.Solids) {
+      ballModelsToHighlight = solidBallModels;
+    } else if (playerColor == AssignedBallType.Stripes) {
+      ballModelsToHighlight = stripedBallModels;
+    } else if (playerColor == AssignedBallType.Eight) {
+      ballModelsToHighlight.push(eightBallModel);
+    }
+    if (!ballModelsToHighlight) return;
+    context.save();
+    context.strokeStyle = "gold";
+    context.lineWidth = 3;
+    context.globalAlpha = 0.4 * (Math.sin(new Date().getTime() * 0.005) + 1) / 2;
+    for (let model of ballModelsToHighlight) {
+      if (model.Ball.Pocketed) continue;
+      context.beginPath();
+      context.arc(model.Body.position.x, model.Body.position.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
+      context.fill();
+      context.stroke();
+    }
+    context.restore();
+  }
+
   function drawGameHUD(context: CanvasRenderingContext2D) {
     context.save();
     let fontSize = 16;
@@ -425,7 +450,7 @@ module game {
     switch (_gameStage) {
       case GameStage.PlacingCue:
         textLeft = "Click to place cue ball";
-        context.font = fontSize * (1 + 0.1 * (Math.sin(new Date().getTime() * 0.005) + 2)) + "px Arial";
+        context.font = fontSize * (1 + 0.1 * (Math.sin(new Date().getTime() * 0.005) + 1)) + "px Arial";
         break;
       case GameStage.Aiming:
         textLeft = "Drag behind cue ball to aim";
@@ -654,6 +679,8 @@ module game {
       }
       // always render game HUD
       drawGameHUD(_render.context);
+      // always hightlight my assigned balls
+      drawHightlightBalls(_render.context);
     });
     // EVENT: after every engine update check if all bodies are sleeping
     Matter.Events.on(_engine, "afterUpdate", function (event) {
