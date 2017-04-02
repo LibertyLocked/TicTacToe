@@ -21,7 +21,8 @@ module GameplayConsts {
   export const BorderThicknessOut = 50;
   export const BallTextureSize = 128; // ball textures are 128x128
   export const ClickDistanceLimit = 150;
-  export const ClickForceMax = 0.02;
+  export const ClickForceMax = 0.018;
+  export const ClickHoldTime = 1500;
 };
 
 module game {
@@ -51,7 +52,6 @@ module game {
   // simply typing in the console, e.g.,
   // game.currentUpdateUI
   export let currentUpdateUI: IUpdateUI = null;
-  export let state: IState = null;
   export let yourPlayerInfo: IPlayerInfo = null;
 
   var translate = gamingPlatform.translate;
@@ -71,18 +71,16 @@ module game {
   var _stickImg: HTMLImageElement; // cue stick png image
 
   // The saved game state
-  var _gameState: IState;
+  export var _gameState: IState;
   // Globals
   var _engine: Matter.Engine;
   var _world: Matter.World;
   var _render: Matter.Render;
   var _mouse: Matter.Mouse;
 
-  var _boardMinX: number; // used for bounds
-  var _boardMaxX: number;
-  var _boardMinY: number;
-  var _boardMaxY: number
   var _mouseDistance = 0; // mouse distance from cue ball
+  var _mouseDownTime = 0;
+  var _lastUpdate: number; // last engine update time
   var _gameStage: GameStage;
   var _firstTouchBall: Ball = null;
   var _pocketedBalls: Ball[] = [];
@@ -94,6 +92,8 @@ module game {
 
   function resetGlobals() {
     _mouseDistance = 0;
+    _mouseDownTime = 0;
+    _lastUpdate = new Date().getTime();
     _firstTouchBall = null;
     _pocketedBalls = [];
     solidBallModels = [];
@@ -104,7 +104,8 @@ module game {
   }
 
   function shootClick(cueBall: Matter.Body) {
-    let force: number = _mouseDistance / GameplayConsts.ClickDistanceLimit * GameplayConsts.ClickForceMax;
+    let forceFraction = getForceFraction(_mouseDownTime);
+    let force = Math.abs(forceFraction * GameplayConsts.ClickForceMax);
 
     console.log("force mag: ", force);
     console.log("mouse distance: ", _mouseDistance);
@@ -120,6 +121,11 @@ module game {
     let bodies = Matter.Composite.allBodies(world);
     let sleeping = bodies.filter((body) => body.isSleeping);
     return bodies.length === sleeping.length;
+  }
+
+  function getForceFraction(mouseDownTime: number): number {
+    return 1 - Math.abs(mouseDownTime % (GameplayConsts.ClickHoldTime * 2) - GameplayConsts.ClickHoldTime)
+      / GameplayConsts.ClickHoldTime;
   }
 
   function handleBallBallCollision(bodyA: Matter.Body, bodyB: Matter.Body) {
@@ -160,8 +166,8 @@ module game {
         collisionFilter: { category: GameplayConsts.CollisionCategoryCue, mask: GameplayConsts.CollisionMaskAllBalls },
         restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
         render: { fillStyle: 'white', strokeStyle: 'black' },
-        label: 'Ball 0',
         mass: GameplayConsts.BallMass,
+        label: 'Ball 0',
       })
     };
     return newCueModel;
@@ -175,8 +181,8 @@ module game {
         collisionFilter: { category: collisionCategory, mask: collisionMask },
         restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
         render: { sprite: { texture: 'imgs/' + ball.Number + '.png', xScale: textureScale, yScale: textureScale } },
-        label: 'Ball ' + ball.Number,
         mass: GameplayConsts.BallMass,
+        label: 'Ball ' + ball.Number,
       })
     };
     return newBallModel;
@@ -202,7 +208,7 @@ module game {
       <any>{
         isStatic: true,
         render: { fillStyle: '#825201', strokeStyle: 'black' },
-        label: 'Border'
+        label: 'Border',
       });
     return body;
   }
@@ -235,11 +241,26 @@ module game {
 
   // clamps the position within board bounds
   function clampWithinBounds(pos: Matter.Vector, radius: number): Matter.Vector {
-    let x = Math.min(_boardMaxX - radius,
-      Math.max(pos.x, _boardMinX + radius));
-    let y = Math.min(_boardMaxY - radius,
-      Math.max(pos.y, _boardMinY + radius));
+    let x = Math.min(_gameState.PoolBoard.Pockets[5].Position.X - radius,
+      Math.max(pos.x, _gameState.PoolBoard.Pockets[0].Position.X + radius));
+    let y = Math.min(_gameState.PoolBoard.Pockets[5].Position.Y - radius,
+      Math.max(pos.y, _gameState.PoolBoard.Pockets[0].Position.Y + radius));
     return { x: x, y: y };
+  }
+
+  function getClosestBallModel(pos: Matter.Vector, targetBodies: Matter.Body[]): BallModel {
+    let minDist = Number.POSITIVE_INFINITY;
+    let minDistModel: BallModel = null;
+    for (let body of targetBodies) {
+      let ballModel = getBallModelFromBody(body);
+      if (!ballModel) continue;
+      let dist = distanceBetweenVectors(ballModel.Body.position, pos);
+      if (dist <= minDist) {
+        minDist = dist;
+        minDistModel = ballModel;
+      }
+    }
+    return minDistModel;
   }
 
   // moves the cue ball and recreates the cue ball body and model
@@ -247,6 +268,10 @@ module game {
     // do not allow placing inside another body
     let bodies = Matter.Query.point(Matter.Composite.allBodies(_world), pos);
     if (bodies.length > 0) return false;
+    // do not allow placing too close to another body
+    let closestBallModel = getClosestBallModel(pos, _world.bodies);
+    if (closestBallModel && distanceBetweenVectors(closestBallModel.Body.position, pos) <=
+      closestBallModel.Ball.Radius + cueBallModel.Ball.Radius) return false;
 
     World.remove(_world, cueBallModel.Body);
     let y: number;
@@ -307,20 +332,20 @@ module game {
     gameService.makeMove(newMove, null);
   }
 
-  function getRaycastPoint(bodies: Matter.Body[], start: Matter.Vector, r: Matter.Vector, dist: number): RaycastResult {
-    var normRay = Matter.Vector.normalise(r);
-    var ray = normRay;
-    var point = Matter.Vector.add(ray, start);
-    for (var i = 0; i < dist; i++) {
-      ray = Matter.Vector.mult(normRay, i);
-      ray = Matter.Vector.add(start, ray);
-      var bod = Matter.Query.point(bodies, ray)[0];
-      if (bod) {
-        return { Point: ray, Body: bod };
-      }
-    }
-    return null;
-  }
+  // function getRaycastPoint(bodies: Matter.Body[], start: Matter.Vector, r: Matter.Vector, dist: number): RaycastResult {
+  //   var normRay = Matter.Vector.normalise(r);
+  //   var ray = normRay;
+  //   var point = Matter.Vector.add(ray, start);
+  //   for (var i = 0; i < dist; i++) {
+  //     ray = Matter.Vector.mult(normRay, i);
+  //     ray = Matter.Vector.add(start, ray);
+  //     var bod = Matter.Query.point(bodies, ray)[0];
+  //     if (bod) {
+  //       return { Point: ray, Body: bod };
+  //     }
+  //   }
+  //   return null;
+  // }
 
   function drawGuideLine(context: CanvasRenderingContext2D, length: number, width: number,
     style: string, alpha: number, raycast: boolean) {
@@ -334,22 +359,14 @@ module game {
       let direction = { x: Math.cos(cueBody.angle) * cueBallModel.Ball.Radius, y: Math.sin(cueBody.angle) * cueBallModel.Ball.Radius };
       let raycastStart = { x: startPoint.x + direction.x, y: startPoint.y + direction.y };
       let collisions = <Matter.IPair[]>Matter.Query.ray(_world.bodies, raycastStart, endPoint, cueBallModel.Ball.Radius * 2);
-      let minDist: number = length;
-      let minDistModel: BallModel = null;
-      for (let collision of collisions) {
-        let body = collision.bodyA;
-        let ballModel = getBallModelFromBody(body);
-        if (!ballModel) continue; // only collide with balls
-        let dist = distanceBetweenVectors(body.position, cueBallModel.Body.position);
-        if (dist <= minDist) {
-          minDist = dist;
-          minDistModel = ballModel;
-        }
-      }
+      let collidedBodies: Matter.Body[] = [];
+      for (let collision of collisions) collidedBodies.push(collision.bodyA);
+      let minDistModel: BallModel = getClosestBallModel(raycastStart, collidedBodies);
       if (minDistModel) {
+        let dist = distanceBetweenVectors(cueBallModel.Body.position, minDistModel.Body.position);
         endPoint = {
-          x: cueBody.position.x + minDist * Math.cos(cueBody.angle),
-          y: cueBody.position.y + minDist * Math.sin(cueBody.angle)
+          x: cueBody.position.x + dist * Math.cos(cueBody.angle),
+          y: cueBody.position.y + dist * Math.sin(cueBody.angle)
         }
         // highlight the ball it's going to hit
         context.save();
@@ -575,12 +592,8 @@ module game {
 
     // create borders
     let pockets = _gameState.PoolBoard.Pockets;
-    _boardMinY = pockets[0].Position.Y;
-    _boardMaxY = pockets[2].Position.Y;
-    _boardMinX = pockets[1].Position.X;
-    _boardMaxX = pockets[4].Position.X;
-    let topLeftCorner: Matter.Vector = {x: pockets[0].Position.X, y: pockets[0].Position.Y};
-    let bottomRightCorner: Matter.Vector = {x: pockets[5].Position.X, y: pockets[5].Position.Y};
+    let topLeftCorner: Matter.Vector = { x: pockets[0].Position.X, y: pockets[0].Position.Y };
+    let bottomRightCorner: Matter.Vector = { x: pockets[5].Position.X, y: pockets[5].Position.Y };
     World.add(_world, [
       createBorderBody(topLeftCorner, bottomRightCorner, false, true), // top
       createBorderBody(topLeftCorner, bottomRightCorner, true, true), // left
@@ -644,6 +657,7 @@ module game {
           _gameStage = GameStage.Aiming;
         }
       }
+      _mouseDownTime = 0;
     });
     // EVENT: handle pocket and ball collision
     Matter.Events.on(_engine, 'collisionStart', function (event) {
@@ -675,10 +689,14 @@ module game {
       // draw the guidelines, cue stick, guide circle
       if (_gameStage == GameStage.Aiming) {
         if (isMouseWithinShootRange()) {
-          drawGuideLine(_render.context, 1000, 4, "white", 0.3, true); // directional guideline
-          drawGuideLine(_render.context, _mouseDistance, 5, "red", 0.4, false); // current force guideline
+          drawGuideLine(_render.context, 1000, 4, "white", 0.4, true); // directional guideline
           drawCueStick(_render.context);
+          if (_mouse.button >= 0) {
+            // current force guideline
+            drawGuideLine(_render.context, getForceFraction(_mouseDownTime) * GameplayConsts.ClickDistanceLimit, 5, "red", 0.6, false);
+          }
         }
+
         drawGuideCircle(_render.context);
       }
       // always render game HUD
@@ -688,6 +706,14 @@ module game {
     });
     // EVENT: after every engine update check if all bodies are sleeping
     Matter.Events.on(_engine, "afterUpdate", function (event) {
+      // accumulate mouse down time
+      let thisUpdate = new Date().getTime();
+      if (_mouse.button >= 0) {
+        // this value is reset on mouseup
+        _mouseDownTime += thisUpdate - _lastUpdate;
+      }
+      _lastUpdate = thisUpdate;
+
       // send return state when all bodies are sleeping
       if (_gameStage == GameStage.CueHit && isWorldSleeping(_world)) {
         _gameStage = GameStage.Finalized;
