@@ -468,47 +468,6 @@ module GameLogic {
                 }
             }
             else { // the cue ball not pocketed
-                let pocketedSolidsCount: number = 0;
-                let pocketedStripesCount: number = 0;
-                for (let ball of currentState.SolidBalls) {
-                    if (ball.Pocketed) {
-                        pocketedSolidsCount++;
-                    }
-                }
-                for (let ball of currentState.StripedBalls) {
-                    if (ball.Pocketed) {
-                        pocketedStripesCount++;
-                    }
-                }
-                let eightBallIndex = 16;
-                if (isBallContained(8, pocketedBalls)) {
-                    eightBallIndex = getBallIndex(8, pocketedBalls);
-                }
-                let lastPocketedSolidIndex: number = 16;
-                let lastPocketedStripeIndex: number = 16;
-                let count: number = 0;
-                for (var ball of pocketedBalls) {
-                    if (ball.BallType == BallType.Solids) {
-                        lastPocketedSolidIndex = count;
-                    } else if (ball.BallType == BallType.Stripes) {
-                        lastPocketedStripeIndex = count;
-                    }
-                    count++;
-                }
-                if (pocketedSolidsCount == 7 && eightBallIndex > lastPocketedSolidIndex) {
-                    if (currentState.Player1Color == AssignedBallType.Solids) { // player 1
-                        nextMove.state.Player1Color = AssignedBallType.Eight;
-                    } else { // player 2
-                        nextMove.state.Player2Color = AssignedBallType.Eight;
-                    }
-                }
-                if (pocketedStripesCount == 7 && eightBallIndex > lastPocketedStripeIndex) {
-                    if (currentState.Player1Color == AssignedBallType.Stripes) { // player 1
-                        nextMove.state.Player1Color = AssignedBallType.Eight;
-                    } else { // player 2
-                        nextMove.state.Player2Color = AssignedBallType.Eight;
-                    }
-                }
                 if (isBallContained(8, pocketedBalls)) { // Eight ball pocketed
                     nextMove.turnIndex = -1;
                     if (currentTurnIndex == 0) {
@@ -548,6 +507,32 @@ module GameLogic {
                         }
                     }
                     else if (currentPlayerColor != AssignedBallType.Eight) { // not Any not Eight
+                        let pocketedSolidsCount: number = 0;
+                        let pocketedStripesCount: number = 0;
+                        for (let ball of currentState.SolidBalls) {
+                            if (ball.Pocketed) {
+                                pocketedSolidsCount++;
+                            }
+                        }
+                        for (let ball of currentState.StripedBalls) {
+                            if (ball.Pocketed) {
+                                pocketedStripesCount++;
+                            }
+                        }
+                        if (pocketedSolidsCount == 7) {
+                            if (currentState.Player1Color == AssignedBallType.Solids) { // player 1
+                                nextMove.state.Player1Color = AssignedBallType.Eight;
+                            } else { // player 2
+                                nextMove.state.Player2Color = AssignedBallType.Eight;
+                            }
+                        }
+                        if (pocketedStripesCount == 7) {
+                            if (currentState.Player1Color == AssignedBallType.Stripes) { // player 1
+                                nextMove.state.Player1Color = AssignedBallType.Eight;
+                            } else { // player 2
+                                nextMove.state.Player2Color = AssignedBallType.Eight;
+                            }
+                        }
                         if (toBallType(currentPlayerColor) != firstTouchedBall.BallType) {
                             nextMove.state.CanMoveCueBall = true;
                             nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
