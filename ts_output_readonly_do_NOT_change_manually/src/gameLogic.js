@@ -171,7 +171,7 @@ var GameLogic;
             Number: 15
         };
         StripeBalls.push(Ball15);
-        var PocketRadius = 1.5 * BallRadius;
+        var PocketRadius = 1.4 * BallRadius;
         var Pockets = [];
         var Pocket1 = {
             Position: { X: BoardWidth * 0.08, Y: BoardHeight * 0.05 },

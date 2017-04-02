@@ -246,7 +246,7 @@ module GameLogic {
         }
         StripeBalls.push(Ball15);
 
-        let PocketRadius = 1.5 * BallRadius;
+        let PocketRadius = 1.4 * BallRadius;
 
         let Pockets: Pocket[] = [];
 

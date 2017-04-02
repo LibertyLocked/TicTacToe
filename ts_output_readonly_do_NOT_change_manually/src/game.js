@@ -5,13 +5,14 @@ var GameplayConsts;
     GameplayConsts.CollisionCategoryColoredBalls = 0x0002;
     GameplayConsts.CollisionMaskAllBalls = 0x0003;
     GameplayConsts.CollisionMaskMouse = 0x0000;
-    GameplayConsts.BallRestitution = 0.9;
+    GameplayConsts.BallMass = 0.2;
+    GameplayConsts.BallRestitution = 0.92;
+    GameplayConsts.BallFrictionAir = 0.012;
     GameplayConsts.BallFriction = 0.01;
-    GameplayConsts.BorderThicknessIn = 8;
     GameplayConsts.BorderThicknessOut = 50;
     GameplayConsts.BallTextureSize = 128; // ball textures are 128x128
     GameplayConsts.ClickDistanceLimit = 150;
-    GameplayConsts.ClickForceMax = 0.036;
+    GameplayConsts.ClickForceMax = 0.02;
 })(GameplayConsts || (GameplayConsts = {}));
 ;
 var game;
@@ -123,9 +124,10 @@ var game;
             Ball: cueBall, Body: Bodies.circle(cueBall.Position.X, cueBall.Position.Y, cueBall.Radius, {
                 isStatic: false,
                 collisionFilter: { category: GameplayConsts.CollisionCategoryCue, mask: GameplayConsts.CollisionMaskAllBalls },
-                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
+                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
                 render: { fillStyle: 'white', strokeStyle: 'black' },
-                label: 'Ball 0'
+                label: 'Ball 0',
+                mass: GameplayConsts.BallMass,
             })
         };
         return newCueModel;
@@ -136,28 +138,28 @@ var game;
             Ball: ball, Body: Bodies.circle(ball.Position.X, ball.Position.Y, ball.Radius, {
                 isStatic: false,
                 collisionFilter: { category: collisionCategory, mask: collisionMask },
-                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
+                restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
                 render: { sprite: { texture: 'imgs/' + ball.Number + '.png', xScale: textureScale, yScale: textureScale } },
-                label: 'Ball ' + ball.Number
+                label: 'Ball ' + ball.Number,
+                mass: GameplayConsts.BallMass,
             })
         };
         return newBallModel;
     }
     // constructs a rectangle body as border, from pocket1 to pocket2
-    function createBorderBody(leftOrRight, leftOrTop) {
+    function createBorderBody(topLeftCorner, bottomRightCorner, leftOrRight, leftOrTop) {
         var x, y, width, height;
-        var thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
-        var thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
+        var thicknessOffset = (GameplayConsts.BorderThicknessOut) / 2;
         if (leftOrRight) {
             y = _render.canvas.height / 2;
             height = _render.canvas.height;
-            width = thicknessTotal;
-            x = leftOrTop ? _boardMinX - thicknessOffset : _boardMaxX + thicknessOffset;
+            width = GameplayConsts.BorderThicknessOut;
+            x = leftOrTop ? topLeftCorner.x - thicknessOffset : bottomRightCorner.x + thicknessOffset;
         }
         else {
-            y = leftOrTop ? _boardMinY - thicknessOffset : _boardMaxY + thicknessOffset;
+            y = leftOrTop ? topLeftCorner.y - thicknessOffset : bottomRightCorner.y + thicknessOffset;
             x = _render.canvas.width / 2;
-            height = thicknessTotal;
+            height = GameplayConsts.BorderThicknessOut;
             width = _render.canvas.width;
         }
         var body = Bodies.rectangle(x, y, width, height, {
@@ -199,8 +201,8 @@ var game;
     }
     // clamps the position within board bounds
     function clampWithinBounds(pos, radius) {
-        var x = Math.min(_boardMaxX - GameplayConsts.BorderThicknessIn - radius, Math.max(pos.x, _boardMinX + GameplayConsts.BorderThicknessIn + radius));
-        var y = Math.min(_boardMaxY - GameplayConsts.BorderThicknessIn - radius, Math.max(pos.y, _boardMinY + GameplayConsts.BorderThicknessIn + radius));
+        var x = Math.min(_boardMaxX - radius, Math.max(pos.x, _boardMinX + radius));
+        var y = Math.min(_boardMaxY - radius, Math.max(pos.y, _boardMinY + radius));
         return { x: x, y: y };
     }
     // moves the cue ball and recreates the cue ball body and model
@@ -327,19 +329,6 @@ var game;
                 context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number, minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
                 context.restore();
             }
-            // let res = getRaycastPoint(_world.bodies, raycastStart, direction, length);
-            // if (res) {
-            //   endPoint = { x: res.Point.x - direction.x, y: res.Point.y - direction.y };
-            //   // draw the mock cue ball
-            //   context.save();
-            //   context.strokeStyle = "white";
-            //   context.lineWidth = 2;
-            //   context.globalAlpha = 0.3;
-            //   context.beginPath();
-            //   context.arc(endPoint.x, endPoint.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
-            //   context.stroke();
-            //   context.restore();
-            // }
         }
         context.save();
         context.globalAlpha = alpha;
@@ -538,11 +527,13 @@ var game;
         _boardMaxY = pockets[2].Position.Y;
         _boardMinX = pockets[1].Position.X;
         _boardMaxX = pockets[4].Position.X;
+        var topLeftCorner = { x: pockets[0].Position.X, y: pockets[0].Position.Y };
+        var bottomRightCorner = { x: pockets[5].Position.X, y: pockets[5].Position.Y };
         World.add(_world, [
-            createBorderBody(false, true),
-            createBorderBody(true, true),
-            createBorderBody(false, false),
-            createBorderBody(true, false),
+            createBorderBody(topLeftCorner, bottomRightCorner, false, true),
+            createBorderBody(topLeftCorner, bottomRightCorner, true, true),
+            createBorderBody(topLeftCorner, bottomRightCorner, false, false),
+            createBorderBody(topLeftCorner, bottomRightCorner, true, false),
         ]);
         // create pockets
         for (var _i = 0, _a = _gameState.PoolBoard.Pockets; _i < _a.length; _i++) {

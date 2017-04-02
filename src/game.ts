@@ -14,13 +14,14 @@ module GameplayConsts {
   export const CollisionCategoryColoredBalls = 0x0002;
   export const CollisionMaskAllBalls = 0x0003;
   export const CollisionMaskMouse = 0x0000;
-  export const BallRestitution = 0.9;
+  export const BallMass = 0.2;
+  export const BallRestitution = 0.92;
+  export const BallFrictionAir = 0.012;
   export const BallFriction = 0.01;
-  export const BorderThicknessIn = 8;
   export const BorderThicknessOut = 50;
   export const BallTextureSize = 128; // ball textures are 128x128
   export const ClickDistanceLimit = 150;
-  export const ClickForceMax = 0.036;
+  export const ClickForceMax = 0.02;
 };
 
 module game {
@@ -157,9 +158,10 @@ module game {
       Ball: cueBall, Body: Bodies.circle(cueBall.Position.X, cueBall.Position.Y, cueBall.Radius, <any>{
         isStatic: false,
         collisionFilter: { category: GameplayConsts.CollisionCategoryCue, mask: GameplayConsts.CollisionMaskAllBalls },
-        restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
+        restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
         render: { fillStyle: 'white', strokeStyle: 'black' },
-        label: 'Ball 0'
+        label: 'Ball 0',
+        mass: GameplayConsts.BallMass,
       })
     };
     return newCueModel;
@@ -171,28 +173,28 @@ module game {
       Ball: ball, Body: Bodies.circle(ball.Position.X, ball.Position.Y, ball.Radius, <any>{
         isStatic: false,
         collisionFilter: { category: collisionCategory, mask: collisionMask },
-        restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFriction,
+        restitution: GameplayConsts.BallRestitution, frictionAir: GameplayConsts.BallFrictionAir, friction: GameplayConsts.BallFriction,
         render: { sprite: { texture: 'imgs/' + ball.Number + '.png', xScale: textureScale, yScale: textureScale } },
-        label: 'Ball ' + ball.Number
+        label: 'Ball ' + ball.Number,
+        mass: GameplayConsts.BallMass,
       })
     };
     return newBallModel;
   }
 
   // constructs a rectangle body as border, from pocket1 to pocket2
-  function createBorderBody(leftOrRight: boolean, leftOrTop: boolean): Matter.Body {
+  function createBorderBody(topLeftCorner: Matter.Vector, bottomRightCorner: Matter.Vector, leftOrRight: boolean, leftOrTop: boolean): Matter.Body {
     let x: number, y: number, width: number, height: number;
-    let thicknessTotal = GameplayConsts.BorderThicknessIn + GameplayConsts.BorderThicknessOut;
-    let thicknessOffset = (GameplayConsts.BorderThicknessOut - GameplayConsts.BorderThicknessIn) / 2;
+    let thicknessOffset = (GameplayConsts.BorderThicknessOut) / 2;
     if (leftOrRight) {
       y = _render.canvas.height / 2;
       height = _render.canvas.height;
-      width = thicknessTotal;
-      x = leftOrTop ? _boardMinX - thicknessOffset : _boardMaxX + thicknessOffset;
+      width = GameplayConsts.BorderThicknessOut;
+      x = leftOrTop ? topLeftCorner.x - thicknessOffset : bottomRightCorner.x + thicknessOffset;
     } else {
-      y = leftOrTop ? _boardMinY - thicknessOffset : _boardMaxY + thicknessOffset;
+      y = leftOrTop ? topLeftCorner.y - thicknessOffset : bottomRightCorner.y + thicknessOffset;
       x = _render.canvas.width / 2;
-      height = thicknessTotal;
+      height = GameplayConsts.BorderThicknessOut;
       width = _render.canvas.width;
     }
     let body = Bodies.rectangle(
@@ -233,10 +235,10 @@ module game {
 
   // clamps the position within board bounds
   function clampWithinBounds(pos: Matter.Vector, radius: number): Matter.Vector {
-    let x = Math.min(_boardMaxX - GameplayConsts.BorderThicknessIn - radius,
-      Math.max(pos.x, _boardMinX + GameplayConsts.BorderThicknessIn + radius));
-    let y = Math.min(_boardMaxY - GameplayConsts.BorderThicknessIn - radius,
-      Math.max(pos.y, _boardMinY + GameplayConsts.BorderThicknessIn + radius));
+    let x = Math.min(_boardMaxX - radius,
+      Math.max(pos.x, _boardMinX + radius));
+    let y = Math.min(_boardMaxY - radius,
+      Math.max(pos.y, _boardMinY + radius));
     return { x: x, y: y };
   }
 
@@ -577,11 +579,13 @@ module game {
     _boardMaxY = pockets[2].Position.Y;
     _boardMinX = pockets[1].Position.X;
     _boardMaxX = pockets[4].Position.X;
+    let topLeftCorner: Matter.Vector = {x: pockets[0].Position.X, y: pockets[0].Position.Y};
+    let bottomRightCorner: Matter.Vector = {x: pockets[5].Position.X, y: pockets[5].Position.Y};
     World.add(_world, [
-      createBorderBody(false, true), // top
-      createBorderBody(true, true), // left
-      createBorderBody(false, false), // bottom
-      createBorderBody(true, false), // right
+      createBorderBody(topLeftCorner, bottomRightCorner, false, true), // top
+      createBorderBody(topLeftCorner, bottomRightCorner, true, true), // left
+      createBorderBody(topLeftCorner, bottomRightCorner, false, false), // bottom
+      createBorderBody(topLeftCorner, bottomRightCorner, true, false), // right
     ]);
 
     // create pockets
