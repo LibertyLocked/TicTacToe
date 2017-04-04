@@ -1,8 +1,5 @@
 interface SupportedLanguages {
-  en: string, iw: string,
-  pt: string, zh: string,
-  el: string, fr: string,
-  hi: string, es: string,
+  en: string, es: string,
 };
 
 interface IProposalData {
@@ -348,42 +345,41 @@ module game {
   // }
 
   function drawGuideLine(context: CanvasRenderingContext2D, length: number, width: number,
-    style: string, alpha: number, raycast: boolean) {
+    style: string, alpha: number) {
     let cueBody = cueBallModel.Body;
     let startPoint = cueBody.position;
     let endPoint: Matter.Vector = {
       x: cueBody.position.x + length * Math.cos(cueBody.angle),
       y: cueBody.position.y + length * Math.sin(cueBody.angle)
     }
-    if (raycast) {
-      let direction = { x: Math.cos(cueBody.angle) * cueBallModel.Ball.Radius, y: Math.sin(cueBody.angle) * cueBallModel.Ball.Radius };
-      let raycastStart = { x: startPoint.x + direction.x, y: startPoint.y + direction.y };
-      let collisions = <Matter.IPair[]>Matter.Query.ray(_world.bodies, raycastStart, endPoint, cueBallModel.Ball.Radius * 2);
-      let collidedBodies: Matter.Body[] = [];
-      for (let collision of collisions) collidedBodies.push(collision.bodyA);
-      let minDistModel: BallModel = getClosestBallModel(raycastStart, collidedBodies);
-      if (minDistModel) {
-        let dist = distanceBetweenVectors(cueBallModel.Body.position, minDistModel.Body.position);
-        endPoint = {
-          x: cueBody.position.x + dist * Math.cos(cueBody.angle),
-          y: cueBody.position.y + dist * Math.sin(cueBody.angle)
-        }
-        // highlight the ball it's going to hit
-        context.save();
-        context.strokeStyle = "white";
-        context.lineWidth = 2;
-        context.globalAlpha = 0.5;
-        context.beginPath();
-        context.arc(minDistModel.Body.position.x, minDistModel.Body.position.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
-        context.stroke();
-        context.font = '16px serif';
-        context.globalAlpha = 0.8;
-        context.textAlign = "center";
-        context.textBaseline = "bottom";
-        context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number,
-          minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
-        context.restore();
+    // raycast
+    let direction = { x: Math.cos(cueBody.angle) * cueBallModel.Ball.Radius, y: Math.sin(cueBody.angle) * cueBallModel.Ball.Radius };
+    let raycastStart = { x: startPoint.x + direction.x, y: startPoint.y + direction.y };
+    let collisions = <Matter.IPair[]>Matter.Query.ray(_world.bodies, raycastStart, endPoint, cueBallModel.Ball.Radius * 2);
+    let collidedBodies: Matter.Body[] = [];
+    for (let collision of collisions) collidedBodies.push(collision.bodyA);
+    let minDistModel: BallModel = getClosestBallModel(raycastStart, collidedBodies);
+    if (minDistModel) {
+      let dist = distanceBetweenVectors(cueBallModel.Body.position, minDistModel.Body.position);
+      endPoint = {
+        x: cueBody.position.x + dist * Math.cos(cueBody.angle),
+        y: cueBody.position.y + dist * Math.sin(cueBody.angle)
       }
+      // highlight the ball it's going to hit
+      context.save();
+      context.strokeStyle = "white";
+      context.lineWidth = 2;
+      context.globalAlpha = 0.5;
+      context.beginPath();
+      context.arc(minDistModel.Body.position.x, minDistModel.Body.position.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
+      context.stroke();
+      context.font = '16px serif';
+      context.globalAlpha = 0.8;
+      context.textAlign = "center";
+      context.textBaseline = "bottom";
+      context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number,
+        minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
+      context.restore();
       // let res = getRaycastPoint(_world.bodies, raycastStart, direction, length);
       // if (res) {
       //   endPoint = { x: res.Point.x - direction.x, y: res.Point.y - direction.y };
@@ -398,6 +394,7 @@ module game {
       //   context.restore();
       // }
     }
+    // draw the guideline
     context.save();
     context.globalAlpha = alpha;
     context.beginPath();
@@ -456,6 +453,27 @@ module game {
       context.fill();
       context.stroke();
     }
+    context.restore();
+  }
+
+  function drawForceCircle(context: CanvasRenderingContext2D) {
+    context.save();
+    context.strokeStyle = "white"; // outline
+    context.lineWidth = 12;
+    context.globalAlpha = 0.4;
+    context.beginPath();
+    context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y,
+      2.5 * cueBallModel.Ball.Radius,
+      - Math.PI / 2, 2 * Math.PI * getForceFraction(_mouseDownTime) - Math.PI / 2);
+    context.stroke();
+    context.strokeStyle = "red";
+    context.lineWidth = 8;
+    context.globalAlpha = 0.6;
+    context.beginPath();
+    context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y,
+      2.5 * cueBallModel.Ball.Radius,
+      - Math.PI / 2, 2 * Math.PI * getForceFraction(_mouseDownTime) - Math.PI / 2);
+    context.stroke();
     context.restore();
   }
 
@@ -689,11 +707,10 @@ module game {
       // draw the guidelines, cue stick, guide circle
       if (_gameStage == GameStage.Aiming) {
         if (isMouseWithinShootRange()) {
-          drawGuideLine(_render.context, 1000, 4, "white", 0.4, true); // directional guideline
+          drawGuideLine(_render.context, 1000, 4, "white", 0.4); // directional guideline
           drawCueStick(_render.context);
           if (_mouse.button >= 0) {
-            // current force guideline
-            drawGuideLine(_render.context, getForceFraction(_mouseDownTime) * GameplayConsts.ClickDistanceLimit, 5, "red", 0.6, false);
+            drawForceCircle(_render.context);
           }
         }
 
