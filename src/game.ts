@@ -15,7 +15,7 @@ module GameplayConsts {
   export const BallRestitution = 0.92;
   export const BallFrictionAir = 0.012;
   export const BallFriction = 0.01;
-  export const BorderThicknessOut = 50;
+  export const BorderThicknessOut = 80;
   export const BallTextureSize = 128; // ball textures are 128x128
   export const ClickDistanceLimit = 150;
   export const ClickForceMax = 0.018;
@@ -33,11 +33,6 @@ module game {
 
   interface BallModel {
     Ball: Ball,
-    Body: Matter.Body,
-  }
-
-  interface RaycastResult {
-    Point: Matter.Vector,
     Body: Matter.Body,
   }
 
@@ -329,21 +324,6 @@ module game {
     gameService.makeMove(newMove, null);
   }
 
-  // function getRaycastPoint(bodies: Matter.Body[], start: Matter.Vector, r: Matter.Vector, dist: number): RaycastResult {
-  //   var normRay = Matter.Vector.normalise(r);
-  //   var ray = normRay;
-  //   var point = Matter.Vector.add(ray, start);
-  //   for (var i = 0; i < dist; i++) {
-  //     ray = Matter.Vector.mult(normRay, i);
-  //     ray = Matter.Vector.add(start, ray);
-  //     var bod = Matter.Query.point(bodies, ray)[0];
-  //     if (bod) {
-  //       return { Point: ray, Body: bod };
-  //     }
-  //   }
-  //   return null;
-  // }
-
   function drawGuideLine(context: CanvasRenderingContext2D, length: number, width: number,
     style: string, alpha: number) {
     let cueBody = cueBallModel.Body;
@@ -380,19 +360,6 @@ module game {
       context.fillText(BallType[minDistModel.Ball.BallType] + " " + minDistModel.Ball.Number,
         minDistModel.Body.position.x, minDistModel.Body.position.y - minDistModel.Ball.Radius);
       context.restore();
-      // let res = getRaycastPoint(_world.bodies, raycastStart, direction, length);
-      // if (res) {
-      //   endPoint = { x: res.Point.x - direction.x, y: res.Point.y - direction.y };
-      //   // draw the mock cue ball
-      //   context.save();
-      //   context.strokeStyle = "white";
-      //   context.lineWidth = 2;
-      //   context.globalAlpha = 0.3;
-      //   context.beginPath();
-      //   context.arc(endPoint.x, endPoint.y, cueBallModel.Ball.Radius, 0, 2 * Math.PI);
-      //   context.stroke();
-      //   context.restore();
-      // }
     }
     // draw the guideline
     context.save();
@@ -463,16 +430,29 @@ module game {
     context.globalAlpha = 0.4;
     context.beginPath();
     context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y,
-      2.5 * cueBallModel.Ball.Radius,
+      2 * cueBallModel.Ball.Radius,
       - Math.PI / 2, 2 * Math.PI * getForceFraction(_mouseDownTime) - Math.PI / 2);
     context.stroke();
     context.strokeStyle = "red";
-    context.lineWidth = 8;
+    context.lineWidth = 10;
     context.globalAlpha = 0.6;
     context.beginPath();
     context.arc(cueBallModel.Body.position.x, cueBallModel.Body.position.y,
-      2.5 * cueBallModel.Ball.Radius,
+      2 * cueBallModel.Ball.Radius,
       - Math.PI / 2, 2 * Math.PI * getForceFraction(_mouseDownTime) - Math.PI / 2);
+    context.stroke();
+    context.restore();
+  }
+
+  function drawBreakLine(context: CanvasRenderingContext2D) {
+    context.save();
+    context.globalAlpha = 0.3;
+    context.beginPath();
+    context.setLineDash([4, 8]);
+    context.moveTo(0, _gameState.PoolBoard.StartLine);
+    context.lineTo(context.canvas.width, _gameState.PoolBoard.StartLine);
+    context.strokeStyle = "white";
+    context.lineWidth = 4;
     context.stroke();
     context.restore();
   }
@@ -496,8 +476,8 @@ module game {
         if (_firstTouchBall) textLeft = "First touch: " + _firstTouchBall.Number;
         break;
       case GameStage.Finalized:
-        if (!isGameOver()) textLeft = "Opponent's turn!";
-        else textLeft = currentUpdateUI.endMatchScores[yourPlayerIndex()] == 0 ? "You lose!" : "You win!";
+        if (isGameOver()) textLeft = "Game over!"
+        else textLeft = "Opponent's turn!";
         break;
     }
     context.fillStyle = "yellow";
@@ -523,13 +503,24 @@ module game {
     context.textAlign = "right";
     context.fillText(textRight, context.canvas.width, 0);
 
-    // show mouse coords on screen bottom
-    if (_mouse) {
-      context.font = fontSize + "px Arial";
-      let coordText = "(" + _mouse.position.x.toFixed(0) + "," + _mouse.position.y.toFixed(0) + ")";
-      context.textAlign = "center";
-      context.textBaseline = "bottom";
-      context.fillText(coordText, context.canvas.width / 2, context.canvas.height);
+    // show remaining ball count on screen bottom
+    let remSolid = 0, remStriped = 0;
+    for (let b of _gameState.SolidBalls) if (!b.Pocketed) remSolid++;
+    for (let b of _gameState.StripedBalls) if (!b.Pocketed) remStriped++;
+    context.font = fontSize + "px Arial";
+    context.textAlign = "center";
+    context.textBaseline = "bottom";
+    context.fillText("Solid: "+remSolid+" / Striped: "+remStriped, context.canvas.width / 2, context.canvas.height);
+
+    // screen center text
+    if (isGameOver()) {
+      context.font = "bold "+ fontSize * 2 + "px Courier"
+      context.textBaseline = "middle";
+      context.lineWidth = 1;
+      let centerText = currentUpdateUI.endMatchScores[currentUpdateUI.yourPlayerIndex] > 0 ? "You win!" : "You lose!";
+      context.fillText(centerText, context.canvas.width / 2, context.canvas.height / 2);
+      context.strokeStyle = "black";
+      context.strokeText(centerText, context.canvas.width / 2, context.canvas.height / 2); //outline
     }
     context.restore();
   }
@@ -598,15 +589,15 @@ module game {
     _render = Render.create({
       element: document.getElementById("canvas-container"),
       engine: _engine,
-      options: {
+      options: <any>{
         height: _gameState.PoolBoard.Height,
         width: _gameState.PoolBoard.Width,
+        wireframes: false,
+        background: 'green',
+        showSleeping: false,
       }
     });
     _engine.world.gravity.y = 0;
-    let renderOptions = <any>_render.options;
-    renderOptions.wireframes = false;
-    renderOptions.background = 'green';
 
     // create borders
     let pockets = _gameState.PoolBoard.Pockets;
@@ -699,7 +690,6 @@ module game {
       let angle = Math.atan2(verticalDistance, horizontalDistance);
       _mouseDistance = distanceBetweenVectors(cuePosition, _mouse.position);
 
-      // set cue ball angle if aiming
       if (_gameStage == GameStage.Aiming) {
         Matter.Body.setAngle(cueBallModel.Body, angle);
       }
@@ -707,14 +697,16 @@ module game {
       // draw the guidelines, cue stick, guide circle
       if (_gameStage == GameStage.Aiming) {
         if (isMouseWithinShootRange()) {
-          drawGuideLine(_render.context, 1000, 4, "white", 0.4); // directional guideline
+          drawGuideLine(_render.context, 1000, 4, "white", 1); // directional guideline
           drawCueStick(_render.context);
           if (_mouse.button >= 0) {
             drawForceCircle(_render.context);
           }
         }
-
         drawGuideCircle(_render.context);
+      }
+      if (_gameStage == GameStage.PlacingCue && _gameState.FirstMove) {
+        drawBreakLine(_render.context);
       }
       // always render game HUD
       drawGameHUD(_render.context);
@@ -741,19 +733,6 @@ module game {
     // start simulation
     Render.run(_render);
     Engine.run(_engine);
-  }
-
-  function maybeSendComputerMove() {
-    // TODO: AI move
-    // if (!isComputerTurn()) return;
-    // let currentMove: IMove = {
-    //   endMatchScores: currentUpdateUI.endMatchScores,
-    //   state: currentUpdateUI.state,
-    //   turnIndex: currentUpdateUI.turnIndex,
-    // }
-    // let move = aiService.findComputerMove(currentMove);
-    // log.info("Computer move: ", move);
-    // gameService.makeMove(move, null);
   }
 
   function isFirstMove(): boolean {
