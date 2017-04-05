@@ -438,7 +438,7 @@ var game;
                 break;
             case GameStage.CueHit:
                 if (_firstTouchBall)
-                    textLeft = "First touch: " + _firstTouchBall.Number;
+                    textLeft = "First contact: " + _firstTouchBall.Number;
                 break;
             case GameStage.Finalized:
                 if (isGameOver())

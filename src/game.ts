@@ -473,7 +473,7 @@ module game {
         textLeft = "Drag behind cue ball to aim";
         break;
       case GameStage.CueHit:
-        if (_firstTouchBall) textLeft = "First touch: " + _firstTouchBall.Number;
+        if (_firstTouchBall) textLeft = "First contact: " + _firstTouchBall.Number;
         break;
       case GameStage.Finalized:
         if (isGameOver()) textLeft = "Game over!"
@@ -510,11 +510,11 @@ module game {
     context.font = fontSize + "px Arial";
     context.textAlign = "center";
     context.textBaseline = "bottom";
-    context.fillText("Solid: "+remSolid+" / Striped: "+remStriped, context.canvas.width / 2, context.canvas.height);
+    context.fillText("Solid: " + remSolid + " / Striped: " + remStriped, context.canvas.width / 2, context.canvas.height);
 
     // screen center text
     if (isGameOver()) {
-      context.font = "bold "+ fontSize * 2 + "px Courier"
+      context.font = "bold " + fontSize * 2 + "px Courier"
       context.textBaseline = "middle";
       context.lineWidth = 1;
       let centerText = currentUpdateUI.endMatchScores[currentUpdateUI.yourPlayerIndex] > 0 ? "You win!" : "You lose!";

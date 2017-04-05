@@ -1,137 +1,112 @@
-describe("In TicTacToe", function() {
-  let X_TURN = 0;
-  let O_TURN = 1;
-  let NO_ONE_TURN = -1;
-  let NO_ONE_WINS: number[] = null;
-  let X_WIN_SCORES = [1, 0];
-  let O_WIN_SCORES = [0, 1];
-  let TIE_SCORES = [0, 0];
+describe("In pool createMove", function () {
 
-    
-  // function expectException(
-  //     turnIndexBeforeMove: number,
-  //     boardBeforeMove: Board,
-  //     row: number,
-  //     col: number): void {
-  //   let stateBeforeMove: IState = boardBeforeMove ? {board: boardBeforeMove, delta: null} : null;
-  //   // We expect an exception to be thrown :)
-  //   let didThrowException = false;
-  //   try {
-  //     gameLogic.createMove(stateBeforeMove, row, col, turnIndexBeforeMove);
-  //   } catch (e) {
-  //     didThrowException = true;
-  //   }
-  //   if (!didThrowException) {
-  //     throw new Error("We expect an illegal move, but createMove didn't throw any exception!")
-  //   }
-  // }
+  function getBallTypeFromNumber(ballNum: number): BallType {
+    if (ballNum === 0) return BallType.Cue;
+    else if (ballNum == 8) return BallType.Eight;
+    else if (ballNum > 8) return BallType.Stripes;
+    else return BallType.Solids;
+  }
 
-  // function expectMove(
-  //     turnIndexBeforeMove: number,
-  //     boardBeforeMove: Board,
-  //     row: number,
-  //     col: number,
-  //     boardAfterMove: Board,
-  //     turnIndexAfterMove: number,
-  //     endMatchScores: number[]): void {
-  //   let expectedMove:IMove = {
-  //       turnIndex: turnIndexAfterMove,
-  //       endMatchScores: endMatchScores,
-  //       state: {board: boardAfterMove, delta: {row: row, col: col}}
-  //     };
-  //   let stateBeforeMove: IState = boardBeforeMove ? {board: boardBeforeMove, delta: null} : null;
-  //   let move: IMove = gameLogic.createMove(stateBeforeMove, row, col, turnIndexBeforeMove);
-  //   expect(angular.equals(move, expectedMove)).toBe(true);
-  // }
+  function getBallFromNumber(state: IState, ballNum: number): Ball {
+    let theBall: Ball;
+    let color = getBallTypeFromNumber(ballNum);
+    if (color == BallType.Cue) theBall = state.CueBall;
+    else if (color == BallType.Solids) theBall = state.SolidBalls[ballNum - 1];
+    else if (color == BallType.Stripes) theBall = state.StripedBalls[ballNum - 9];
+    else theBall = state.EightBall;
+    return theBall;
+  }
 
-  // it("Initial move", function() {
-  //   let move: IMove = gameLogic.createInitialMove();
-  //   let expectedMove:IMove = {
-  //       turnIndex: X_TURN,
-  //       endMatchScores: NO_ONE_WINS,
-  //       state: {board: 
-  //         [['', '', ''],
-  //         ['', '', ''],
-  //         ['', '', '']], delta: null}
-  //     };
-  //   expect(angular.equals(move, expectedMove)).toBe(true);
-  // });
-  
-  // it("placing X in 0x0 from initial state", function() {
-  //   expectMove(X_TURN, null, 0, 0,
-  //     [['X', '', ''],
-  //      ['', '', ''],
-  //      ['', '', '']], O_TURN, NO_ONE_WINS);
-  // });
+  // sets the delta state and updates the balls in the state
+  function setDeltaState(state: IState, touchedNum: number, ...pottedNum: number[]) {
+    let firstTouchedBall = touchedNum ? getBallFromNumber(state, touchedNum) : null;
+    let pocketedBalls: Ball[] = [];
+    for (let num of pottedNum) {
+      let theBall = getBallFromNumber(state, num);
+      theBall.Pocketed = true;
+      pocketedBalls.push(theBall);
+    }
+    // set the delta state
+    state.DeltaBalls = {
+      TouchedBall: firstTouchedBall,
+      PocketedBalls: pocketedBalls,
+    };
+  }
 
-  // it("placing O in 0x1 after X placed X in 0x0", function() {
-  //   expectMove(O_TURN,
-  //     [['X', '', ''],
-  //      ['', '', ''],
-  //      ['', '', '']], 0, 1,
-  //     [['X', 'O', ''],
-  //      ['', '', ''],
-  //      ['', '', '']], X_TURN, NO_ONE_WINS);
-  // });
+  // sets the balls to be potted, but does not set the delta state
+  function setBallsPotted(state: IState, ...pottedNum: number[]) {
+    for (let num of pottedNum) {
+      let theBall = getBallFromNumber(state, num);
+      getBallFromNumber(state, num).Pocketed = true;
+    }
+  }
 
-  // it("placing an O in a non-empty position is illegal", function() {
-  //   expectException(O_TURN,
-  //     [['X', '', ''],
-  //      ['', '', ''],
-  //      ['', '', '']], 0, 0);
-  // });
+  it("on break: no ball hit", function () {
+    let state = GameLogic.getInitialState();
+    setDeltaState(state, null);
+    let nextMove = GameLogic.createMove(state, 0);
+    // game should switch turn
+    expect(nextMove.turnIndex).toBe(1);
+    // it's a scratch - the other player gets to move the ball
+    expect(nextMove.state.CanMoveCueBall).toBe(true);
+  });
 
-  // it("cannot move after the game is over", function() {
-  //   expectException(O_TURN,
-  //     [['X', 'O', ''],
-  //      ['X', 'O', ''],
-  //      ['X', '', '']], 2, 1);
-  // });
+  it("on break: sinking eight", function () {
+    let state: IState = GameLogic.getInitialState();
+    setDeltaState(state, 8, 8);
+    let nextMove = GameLogic.createMove(state, 0);
+    // game should not switch turn
+    expect(nextMove.turnIndex).toBe(0);
+    // the state should be re-initialized
+    expect(angular.equals(nextMove.state, GameLogic.getInitialState())).toBe(true);
+  });
 
-  // it("placing O in 2x1", function() {
-  //   expectMove(O_TURN,
-  //     [['O', 'X', ''],
-  //      ['X', 'O', ''],
-  //      ['X', '', '']], 2, 1,
-  //     [['O', 'X', ''],
-  //      ['X', 'O', ''],
-  //      ['X', 'O', '']], X_TURN, NO_ONE_WINS);
-  // });
+  it("potting 8 and cue at the same time, touching 8 first", function () {
+    let state = GameLogic.getInitialState();
+    state.FirstMove = false;
+    state.CanMoveCueBall = false;
+    state.Player1Color = AssignedBallType.Solids;
+    state.Player2Color = AssignedBallType.Stripes;
+    setBallsPotted(state, 1, 2, 3, 9, 10);
+    setDeltaState(state, 8, 8, 0);
+    let nextMove = GameLogic.createMove(state, 0);
+    // game should end
+    expect(nextMove.turnIndex).toBe(-1);
+    expect(angular.equals(nextMove.endMatchScores, [0, 1])).toBe(true);
+  });
 
-  // it("X wins by placing X in 2x0", function() {
-  //   expectMove(X_TURN,
-  //     [['X', 'O', ''],
-  //      ['X', 'O', ''],
-  //      ['', '', '']], 2, 0,
-  //     [['X', 'O', ''],
-  //      ['X', 'O', ''],
-  //      ['X', '', '']], NO_ONE_TURN, X_WIN_SCORES);
-  // });
+  it("do not assign player to 8 before all his balls are potted", function () {
+    let state = GameLogic.getInitialState();
+    state.FirstMove = false;
+    state.CanMoveCueBall = false;
+    state.Player1Color = AssignedBallType.Eight;
+    state.Player2Color = AssignedBallType.Stripes;
+    setBallsPotted(state, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12);
+    setDeltaState(state, 13, 13);
+    let nextMove = GameLogic.createMove(state, 1);
+    // game should not switch turn because player potted a ball
+    expect(nextMove.turnIndex).toBe(1);
+    // player 1's color should still be 8
+    expect(nextMove.state.Player1Color).toBe(AssignedBallType.Eight);
+    // player 2's color should not change
+    expect(nextMove.state.Player2Color).toBe(AssignedBallType.Stripes);
+  });
 
-  // it("O wins by placing O in 1x1", function() {
-  //   expectMove(O_TURN,
-  //     [['X', 'X', 'O'],
-  //      ['X', '', ''],
-  //      ['O', '', '']], 1, 1,
-  //     [['X', 'X', 'O'],
-  //      ['X', 'O', ''],
-  //      ['O', '', '']], NO_ONE_TURN, O_WIN_SCORES);
-  // });
+  it("assign both players to 8 if one move potted 2 balls of different colors and no colored ball is left", function () {
+    let state = GameLogic.getInitialState();
+    state.FirstMove = false;
+    state.CanMoveCueBall = false;
+    state.Player1Color = AssignedBallType.Solids;
+    state.Player2Color = AssignedBallType.Stripes;
+    setBallsPotted(state, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14);
+    setDeltaState(state, 7, 7, 15);
+    let nextMove = GameLogic.createMove(state, 1);
+    // game should switch turn because player hit opponent's ball first
+    expect(nextMove.turnIndex).toBe(0);
+    // player 1's color should still be solids
+    expect(nextMove.state.Player1Color).toBe(AssignedBallType.Eight);
+    // player 2's color should not change
+    expect(nextMove.state.Player2Color).toBe(AssignedBallType.Eight);
+  });
 
-  // it("the game ties when there are no more empty cells", function() {
-  //   expectMove(X_TURN,
-  //     [['X', 'O', 'X'],
-  //      ['X', 'O', 'O'],
-  //      ['O', 'X', '']], 2, 2,
-  //     [['X', 'O', 'X'],
-  //      ['X', 'O', 'O'],
-  //      ['O', 'X', 'X']], NO_ONE_TURN, TIE_SCORES);
-  // });
-
-  // it("placing X outside the board (in 0x3) is illegal", function() {
-  //   expectException(X_TURN,
-  //     [['', '', ''],
-  //      ['', '', ''],
-  //      ['', '', '']], 0, 3);
-  // });
 });

@@ -49,7 +49,7 @@ interface ReturnState {
  * To contain all information about the player
  */
 interface Player {
-    Assigned: AssignedBallType;       // which color is he assigned               
+    Assigned: AssignedBallType;       // which color is he assigned
 }
 
 interface IState {
@@ -92,6 +92,165 @@ interface IState {
 
 module GameLogic {
 
+    function initBall(Number: number): Ball {
+        let coefficient = 0.8;
+        let blackX = 264 * coefficient;
+        let blackY = 264 * coefficient;
+        let BoardHeight = 960 * coefficient;
+        let BoardWidth = 530 * coefficient;
+        const BallRadius = 12;
+
+        let ball: Ball;
+        switch (Number) {
+            case 0:
+                ball = {
+                    Position: { X: blackX * coefficient, Y: blackY + 400 * coefficient },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Cue,
+                    Number: 0
+                };
+                break;
+            case 1:
+                ball = {
+                    Position: { X: blackX - 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 1
+                };
+                break;
+            case 2:
+                ball = {
+                    Position: { X: blackX + 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 2
+                };
+                break;
+            case 3:
+                ball = {
+                    Position: { X: blackX - 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 3
+                };
+                break;
+            case 4:
+                ball = {
+                    Position: { X: blackX + BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 4
+                };
+                break;
+            case 5:
+                ball = {
+                    Position: { X: blackX + 2 * BallRadius, Y: blackY },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 5
+                };
+                break;
+            case 6:
+                ball = {
+                    Position: { X: blackX - BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 6
+                };
+                break;
+            case 7:
+                ball = {
+                    Position: { X: blackX, Y: blackY + 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Solids,
+                    Number: 7
+                };
+                break;
+            case 8:
+                ball = {
+                    Position: { X: blackX, Y: blackY },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Eight,
+                    Number: 8
+                };
+                break;
+            case 9:
+                ball = {
+                    Position: { X: blackX - 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 9
+                };
+                break;
+            case 10:
+                ball = {
+                    Position: { X: blackX, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 10
+                };
+                break;
+            case 11:
+                ball = {
+                    Position: { X: blackX + 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 11
+                };
+                break;
+            case 12:
+                ball = {
+                    Position: { X: blackX - BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 12
+                };
+                break;
+            case 13:
+                ball = {
+                    Position: { X: blackX + 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 13
+                };
+                break;
+            case 14:
+                ball = {
+                    Position: { X: blackX - 2 * BallRadius, Y: blackY },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 14
+                };
+                break;
+            case 15:
+                ball = {
+                    Position: { X: blackX + BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
+                    Pocketed: false,
+                    Radius: BallRadius,
+                    BallType: BallType.Stripes,
+                    Number: 15
+                };
+                break;
+            default: ;
+        }
+        return ball;
+    }
+
     export function getInitialState(): IState {
         //To change the size the board, simply change the coefficient, then all the size will change accordingly.
         let coefficient = 0.8;
@@ -101,149 +260,166 @@ module GameLogic {
         let BoardWidth = 530 * coefficient;
         const BallRadius = 12;
 
-        let CueBall: Ball = {
-            Position: { X: blackX * coefficient, Y: blackY + 400 * coefficient },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Cue,
-            Number: 0
-        }
+        //let CueBall: Ball = {
+        //    Position: { X: blackX * coefficient, Y: blackY + 400 * coefficient },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Cue,
+        //    Number: 0
+        //}
+        let CueBall: Ball = initBall(0);
+
         //Create solid balls
         let solidBalls: Ball[] = [];
-        let Ball1: Ball = {
-            Position: { X: blackX - 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 1
-        }
+        //let Ball1: Ball = {
+        //    Position: { X: blackX - 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 1
+        //}
+        let Ball1: Ball = initBall(1);
         solidBalls.push(Ball1);
 
-        let Ball2: Ball = {
-            Position: { X: blackX + 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 2
-        }
+        //let Ball2: Ball = {
+        //    Position: { X: blackX + 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 2
+        //}
+        let Ball2: Ball = initBall(2);
         solidBalls.push(Ball2);
 
-        let Ball3: Ball = {
-            Position: { X: blackX - 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 3
-        }
+        //let Ball3: Ball = {
+        //    Position: { X: blackX - 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 3
+        //}
+        let Ball3: Ball = initBall(3);
         solidBalls.push(Ball3);
 
-        let Ball4: Ball = {
-            Position: { X: blackX + BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 4
-        }
+        //let Ball4: Ball = {
+        //    Position: { X: blackX + BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 4
+        //}
+        let Ball4: Ball = initBall(4);
         solidBalls.push(Ball4);
 
-        let Ball5: Ball = {
-            Position: { X: blackX + 2 * BallRadius, Y: blackY },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 5
-        }
+        //let Ball5: Ball = {
+        //    Position: { X: blackX + 2 * BallRadius, Y: blackY },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 5
+        //}
+        let Ball5: Ball = initBall(5);
         solidBalls.push(Ball5);
 
-        let Ball6: Ball = {
-            Position: { X: blackX - BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 6
-        }
+        //let Ball6: Ball = {
+        //    Position: { X: blackX - BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 6
+        //}
+        let Ball6: Ball = initBall(6);
         solidBalls.push(Ball6);
 
-        let Ball7: Ball = {
-            Position: { X: blackX, Y: blackY + 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Solids,
-            Number: 7
-        }
+        //let Ball7: Ball = {
+        //    Position: { X: blackX, Y: blackY + 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Solids,
+        //    Number: 7
+        //}
+        let Ball7: Ball = initBall(7);
         solidBalls.push(Ball7);
 
-        let EightBall: Ball = {
-            Position: { X: blackX, Y: blackY },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Eight,
-            Number: 8
-        }
+        //let EightBall: Ball = {
+        //    Position: { X: blackX, Y: blackY },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Eight,
+        //    Number: 8
+        //}
+        let EightBall: Ball = initBall(8);
 
         let StripeBalls: Ball[] = [];
 
-        let Ball9: Ball = {
-            Position: { X: blackX - 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 9
-        }
+        //let Ball9: Ball = {
+        //    Position: { X: blackX - 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 9
+        //}
+        let Ball9: Ball = initBall(9);
         StripeBalls.push(Ball9);
 
-        let Ball10: Ball = {
-            Position: { X: blackX, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 10
-        }
+        //let Ball10: Ball = {
+        //    Position: { X: blackX, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 10
+        //}
+        let Ball10: Ball = initBall(10);
         StripeBalls.push(Ball10);
 
-        let Ball11: Ball = {
-            Position: { X: blackX + 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 11
-        }
+        //let Ball11: Ball = {
+        //    Position: { X: blackX + 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 11
+        //}
+        let Ball11: Ball = initBall(11);
         StripeBalls.push(Ball11);
 
-        let Ball12: Ball = {
-            Position: { X: blackX - BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 12
-        }
+        //let Ball12: Ball = {
+        //    Position: { X: blackX - BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 12
+        //}
+        let Ball12: Ball = initBall(12);
         StripeBalls.push(Ball12);
 
-        let Ball13: Ball = {
-            Position: { X: blackX + 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 13
-        }
+        //let Ball13: Ball = {
+        //    Position: { X: blackX + 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 13
+        //}
+        let Ball13: Ball = initBall(13);
         StripeBalls.push(Ball13);
 
-        let Ball14: Ball = {
-            Position: { X: blackX - 2 * BallRadius, Y: blackY },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 14
-        }
+        //let Ball14: Ball = {
+        //    Position: { X: blackX - 2 * BallRadius, Y: blackY },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 14
+        //}
+        let Ball14: Ball = initBall(14);
         StripeBalls.push(Ball14);
 
-        let Ball15: Ball = {
-            Position: { X: blackX + BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
-            Pocketed: false,
-            Radius: BallRadius,
-            BallType: BallType.Stripes,
-            Number: 15
-        }
+        //let Ball15: Ball = {
+        //    Position: { X: blackX + BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
+        //    Pocketed: false,
+        //    Radius: BallRadius,
+        //    BallType: BallType.Stripes,
+        //    Number: 15
+        //}
+        let Ball15: Ball = initBall(15);
         StripeBalls.push(Ball15);
 
         let PocketRadius = 1.4 * BallRadius;
@@ -422,19 +598,14 @@ module GameLogic {
             }
         }
         else { // some balls pocketed
-            if (isBallContained(0, pocketedBalls)) { // the cue ball pocketed             
+            if (isBallContained(0, pocketedBalls)) { // the cue ball pocketed
                 if (isBallContained(8, pocketedBalls)) { // if the 8 ball pocketed
-                    if (currentPlayerColor == AssignedBallType.Eight) {
-                        nextMove.turnIndex = -1; // ends game
-                        switch (currentTurnIndex) {
-                            case 0:
-                                nextMove.endMatchScores = [0, 1];
-                                break;
-                            case 1:
-                                nextMove.endMatchScores = [1, 0];
-                                break;
-                            default: ;
-                        }
+                    nextMove.turnIndex = -1;
+                    if (currentTurnIndex == 0) {
+                        nextMove.endMatchScores = [0, 1];
+                    }
+                    else {
+                        nextMove.endMatchScores = [1, 0];
                     }
                 }
                 else { // if the 8 ball not pocketed
@@ -468,10 +639,18 @@ module GameLogic {
                 }
             }
             else { // the cue ball not pocketed
+                // if the cue ball knocked out of the table
+                if (currentState.CueBall.Position.X < 0
+                    || currentState.CueBall.Position.X > currentState.PoolBoard.Width
+                    || currentState.CueBall.Position.Y < 0
+                    || currentState.CueBall.Position.Y > currentState.PoolBoard.Height) {
+                    nextMove.state.CanMoveCueBall = true;
+                    nextMove.turnIndex = theOpponentsTurnIndex(currentTurnIndex);
+                }
                 if (isBallContained(8, pocketedBalls)) { // Eight ball pocketed
                     nextMove.turnIndex = -1;
                     if (currentTurnIndex == 0) {
-                        if (currentState.Player1Color == AssignedBallType.Eight) {
+                        if (currentPlayerColor == AssignedBallType.Eight ) {
                             nextMove.endMatchScores = [1, 0];
                         }
                         else {
@@ -479,7 +658,7 @@ module GameLogic {
                         }
                     }
                     else {
-                        if (currentState.Player2Color == AssignedBallType.Eight) {
+                        if (currentPlayerColor == AssignedBallType.Eight ) {
                             nextMove.endMatchScores = [0, 1];
                         }
                         else {
@@ -487,7 +666,7 @@ module GameLogic {
                         }
                     }
                 }
-                else { // Eight ball not pocketed 
+                else { // Eight ball not pocketed
                     if (currentPlayerColor == AssignedBallType.Any) {
                         nextMove.turnIndex = currentTurnIndex;
                         switch (currentTurnIndex) {
@@ -522,14 +701,14 @@ module GameLogic {
                         if (pocketedSolidsCount == 7) {
                             if (currentState.Player1Color == AssignedBallType.Solids) { // player 1
                                 nextMove.state.Player1Color = AssignedBallType.Eight;
-                            } else { // player 2
+                            } else if (currentState.Player2Color == AssignedBallType.Solids) { // player 2
                                 nextMove.state.Player2Color = AssignedBallType.Eight;
                             }
                         }
                         if (pocketedStripesCount == 7) {
                             if (currentState.Player1Color == AssignedBallType.Stripes) { // player 1
                                 nextMove.state.Player1Color = AssignedBallType.Eight;
-                            } else { // player 2
+                            } else if (currentState.Player2Color == AssignedBallType.Stripes) { // player 2
                                 nextMove.state.Player2Color = AssignedBallType.Eight;
                             }
                         }
