@@ -155,4 +155,21 @@ describe("In pool createMove", function () {
     expect(move.state.Player2Color).toBe(AssignedBallType.Eight);
   });
 
+  it("assign player to eight if player pots all the balls", function () {
+    let state = GameLogic.getInitialState();
+    state.FirstMove = false;
+    state.Player1Color = AssignedBallType.Solids;
+    state.Player2Color = AssignedBallType.Stripes;
+    setBallsPotted(state, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15);
+    setDeltaState(state, 9, 9);
+    let move = GameLogic.createMove(state, 1);
+    // game should not switch player
+    expect(move.turnIndex).toBe(1);
+    expect(move.state.CanMoveCueBall).toBe(false);
+    // player1's color should remain unchanged
+    expect(move.state.Player1Color).toBe(AssignedBallType.Solids);
+    // player2's color should be 8 now
+    expect(move.state.Player2Color).toBe(AssignedBallType.Eight);
+  });
+
 });
