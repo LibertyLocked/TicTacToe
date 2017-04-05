@@ -38,8 +38,6 @@ var GameLogic;
         var coefficient = 0.8;
         var blackX = 264 * coefficient;
         var blackY = 264 * coefficient;
-        var BoardHeight = 960 * coefficient;
-        var BoardWidth = 530 * coefficient;
         var BallRadius = 12;
         var ball;
         switch (Number) {
@@ -194,156 +192,23 @@ var GameLogic;
     function getInitialState() {
         //To change the size the board, simply change the coefficient, then all the size will change accordingly.
         var coefficient = 0.8;
-        var blackX = 264 * coefficient;
-        var blackY = 264 * coefficient;
         var BoardHeight = 960 * coefficient;
         var BoardWidth = 530 * coefficient;
         var BallRadius = 12;
-        //let CueBall: Ball = {
-        //    Position: { X: blackX * coefficient, Y: blackY + 400 * coefficient },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Cue,
-        //    Number: 0
-        //}
-        var CueBall = initBall(0);
-        //Create solid balls
+        // cue ball
+        var cueBall = initBall(0);
+        // Create solid balls
         var solidBalls = [];
-        //let Ball1: Ball = {
-        //    Position: { X: blackX - 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 1
-        //}
-        var Ball1 = initBall(1);
-        solidBalls.push(Ball1);
-        //let Ball2: Ball = {
-        //    Position: { X: blackX + 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 2
-        //}
-        var Ball2 = initBall(2);
-        solidBalls.push(Ball2);
-        //let Ball3: Ball = {
-        //    Position: { X: blackX - 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 3
-        //}
-        var Ball3 = initBall(3);
-        solidBalls.push(Ball3);
-        //let Ball4: Ball = {
-        //    Position: { X: blackX + BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 4
-        //}
-        var Ball4 = initBall(4);
-        solidBalls.push(Ball4);
-        //let Ball5: Ball = {
-        //    Position: { X: blackX + 2 * BallRadius, Y: blackY },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 5
-        //}
-        var Ball5 = initBall(5);
-        solidBalls.push(Ball5);
-        //let Ball6: Ball = {
-        //    Position: { X: blackX - BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 6
-        //}
-        var Ball6 = initBall(6);
-        solidBalls.push(Ball6);
-        //let Ball7: Ball = {
-        //    Position: { X: blackX, Y: blackY + 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Solids,
-        //    Number: 7
-        //}
-        var Ball7 = initBall(7);
-        solidBalls.push(Ball7);
-        //let EightBall: Ball = {
-        //    Position: { X: blackX, Y: blackY },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Eight,
-        //    Number: 8
-        //}
-        var EightBall = initBall(8);
-        var StripeBalls = [];
-        //let Ball9: Ball = {
-        //    Position: { X: blackX - 4 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 9
-        //}
-        var Ball9 = initBall(9);
-        StripeBalls.push(Ball9);
-        //let Ball10: Ball = {
-        //    Position: { X: blackX, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 10
-        //}
-        var Ball10 = initBall(10);
-        StripeBalls.push(Ball10);
-        //let Ball11: Ball = {
-        //    Position: { X: blackX + 2 * BallRadius, Y: blackY - 2 * BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 11
-        //}
-        var Ball11 = initBall(11);
-        StripeBalls.push(Ball11);
-        //let Ball12: Ball = {
-        //    Position: { X: blackX - BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 12
-        //}
-        var Ball12 = initBall(12);
-        StripeBalls.push(Ball12);
-        //let Ball13: Ball = {
-        //    Position: { X: blackX + 3 * BallRadius, Y: blackY - BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 13
-        //}
-        var Ball13 = initBall(13);
-        StripeBalls.push(Ball13);
-        //let Ball14: Ball = {
-        //    Position: { X: blackX - 2 * BallRadius, Y: blackY },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 14
-        //}
-        var Ball14 = initBall(14);
-        StripeBalls.push(Ball14);
-        //let Ball15: Ball = {
-        //    Position: { X: blackX + BallRadius, Y: blackY + BallRadius * Math.sqrt(3) },
-        //    Pocketed: false,
-        //    Radius: BallRadius,
-        //    BallType: BallType.Stripes,
-        //    Number: 15
-        //}
-        var Ball15 = initBall(15);
-        StripeBalls.push(Ball15);
+        for (var i = 1; i <= 7; i++) {
+            solidBalls.push(initBall(i));
+        }
+        // eight ball
+        var eightBall = initBall(8);
+        // Create striped balls
+        var stripedBalls = [];
+        for (var i = 9; i <= 15; i++) {
+            stripedBalls.push(initBall(i));
+        }
         var PocketRadius = 1.4 * BallRadius;
         var Pockets = [];
         var Pocket1 = {
@@ -351,7 +216,7 @@ var GameLogic;
             Radius: PocketRadius
         };
         Pockets.push(Pocket1);
-        //Change 0.08 to 0.07 to put it closer to edge.
+        //Change 0.08 to 0.06 to put it closer to edge.
         var Pocket2 = {
             Position: { X: BoardWidth * 0.06, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
@@ -367,7 +232,7 @@ var GameLogic;
             Radius: PocketRadius
         };
         Pockets.push(Pocket4);
-        //Change 0.92 to 0.93 to put it closer to edge.
+        //Change 0.92 to 0.94 to put it closer to edge.
         var Pocket5 = {
             Position: { X: BoardWidth * 0.94, Y: BoardHeight * 0.5 },
             Radius: PocketRadius
@@ -381,7 +246,7 @@ var GameLogic;
         var PoolBoard = {
             Height: BoardHeight,
             Width: BoardWidth,
-            StartLine: CueBall.Position.Y,
+            StartLine: cueBall.Position.Y,
             Pockets: Pockets,
         };
         var CanMoveCueBall = true;
@@ -394,9 +259,9 @@ var GameLogic;
         };
         return {
             SolidBalls: solidBalls,
-            StripedBalls: StripeBalls,
-            EightBall: EightBall,
-            CueBall: CueBall,
+            StripedBalls: stripedBalls,
+            EightBall: eightBall,
+            CueBall: cueBall,
             CanMoveCueBall: CanMoveCueBall,
             PoolBoard: PoolBoard,
             FirstMove: FirstMove,

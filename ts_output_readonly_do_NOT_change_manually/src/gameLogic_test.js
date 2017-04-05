@@ -54,7 +54,7 @@ describe("In pool createMove", function () {
             getBallFromNumber(state, num).Pocketed = true;
         }
     }
-    it("on break: no ball hit", function () {
+    it("on break: no ball hit. foul", function () {
         var state = GameLogic.getInitialState();
         setDeltaState(state, null);
         var nextMove = GameLogic.createMove(state, 0);
@@ -63,7 +63,7 @@ describe("In pool createMove", function () {
         // it's a scratch - the other player gets to move the ball
         expect(nextMove.state.CanMoveCueBall).toBe(true);
     });
-    it("on break: sinking eight", function () {
+    it("on break: sinking eight causes a re-rack", function () {
         var state = GameLogic.getInitialState();
         setDeltaState(state, 8, 8);
         var nextMove = GameLogic.createMove(state, 0);
@@ -72,7 +72,7 @@ describe("In pool createMove", function () {
         // the state should be re-initialized
         expect(angular.equals(nextMove.state, GameLogic.getInitialState())).toBe(true);
     });
-    it("potting 8 and cue at the same time, touching 8 first", function () {
+    it("potting 8 and cue at the same time, touching 8 first. player should lose", function () {
         var state = GameLogic.getInitialState();
         state.FirstMove = false;
         state.CanMoveCueBall = false;
@@ -91,7 +91,7 @@ describe("In pool createMove", function () {
         state.CanMoveCueBall = false;
         state.Player1Color = AssignedBallType.Eight;
         state.Player2Color = AssignedBallType.Stripes;
-        setBallsPotted(state, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12);
+        setBallsPotted(state, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12); // left on board: 8 13 14 15
         setDeltaState(state, 13, 13);
         var nextMove = GameLogic.createMove(state, 1);
         // game should not switch turn because player potted a ball
@@ -107,7 +107,7 @@ describe("In pool createMove", function () {
         state.CanMoveCueBall = false;
         state.Player1Color = AssignedBallType.Solids;
         state.Player2Color = AssignedBallType.Stripes;
-        setBallsPotted(state, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14);
+        setBallsPotted(state, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14); // left on board: 7 8 15
         setDeltaState(state, 7, 7, 15);
         var nextMove = GameLogic.createMove(state, 1);
         // game should switch turn because player hit opponent's ball first
@@ -116,6 +116,19 @@ describe("In pool createMove", function () {
         expect(nextMove.state.Player1Color).toBe(AssignedBallType.Eight);
         // player 2's color should not change
         expect(nextMove.state.Player2Color).toBe(AssignedBallType.Eight);
+    });
+    it("potting all 3 remaning balls 7, 8, 9 at the same time should result in player losing", function () {
+        var state = GameLogic.getInitialState();
+        state.FirstMove = false;
+        state.CanMoveCueBall = false;
+        state.Player1Color = AssignedBallType.Solids;
+        state.Player2Color = AssignedBallType.Stripes;
+        setBallsPotted(state, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15); // left on board: 7 8 9
+        setDeltaState(state, 7, 8, 9);
+        var nextMove = GameLogic.createMove(state, 0);
+        // game should end with player 1 losing
+        expect(nextMove.turnIndex).toBe(-1);
+        expect(angular.equals(nextMove.endMatchScores, [0, 1])).toBe(true);
     });
 });
 //# sourceMappingURL=gameLogic_test.js.map
