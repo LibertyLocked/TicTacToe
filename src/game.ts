@@ -517,7 +517,11 @@ module game {
       context.font = "bold " + fontSize * 2 + "px Courier"
       context.textBaseline = "middle";
       context.lineWidth = 1;
-      let centerText = currentUpdateUI.endMatchScores[currentUpdateUI.yourPlayerIndex] > 0 ? "You win!" : "You lose!";
+      let centerText = "";
+      if (currentUpdateUI.playMode == 'passAndPlay') 
+        centerText = "Player " + (currentUpdateUI.endMatchScores[0] == 1 ? "1" : "2") + " wins";
+      else 
+        centerText = currentUpdateUI.endMatchScores[currentUpdateUI.yourPlayerIndex] > 0 ? "You win!" : "You lose!";
       context.fillText(centerText, context.canvas.width / 2, context.canvas.height / 2);
       context.strokeStyle = "black";
       context.strokeText(centerText, context.canvas.width / 2, context.canvas.height / 2); //outline
